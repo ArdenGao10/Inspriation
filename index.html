@@ -493,6 +493,180 @@
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
   ::-webkit-scrollbar-thumb:hover { background: #d4c5ad; }
 
+  /* Media input toolbar */
+  .media-tools {
+    display: flex;
+    gap: 4px;
+    padding-bottom: 3px;
+  }
+  .media-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--surface-soft);
+    color: var(--text-soft);
+    font-size: 16px;
+    display: grid;
+    place-items: center;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .media-btn:hover {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .media-btn.recording {
+    background: #e85a5a;
+    color: #fff;
+    animation: pulse 1.2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.08); opacity: 0.85; }
+  }
+
+  /* Extract card (image / chat record fragment confirmation) */
+  .extract-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-top: 4px;
+  }
+  .extract-title {
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+  .extract-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+  .extract-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--surface-soft);
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .extract-row:hover { background: var(--accent-soft); }
+  .extract-row input[type=checkbox] {
+    margin-top: 3px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+  .extract-row span { flex: 1; word-break: break-word; }
+  .extract-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border);
+  }
+  .extract-actions button {
+    padding: 7px 16px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 500;
+  }
+  .extract-actions button:disabled {
+    background: var(--border);
+    color: var(--text-soft);
+    cursor: not-allowed;
+  }
+
+  /* Image message bubble */
+  .msg-image-wrap {
+    background: var(--purple-soft);
+    padding: 6px;
+    border-radius: 12px;
+    border-top-right-radius: 4px;
+    display: inline-block;
+    max-width: 240px;
+  }
+  .msg-image-wrap img {
+    max-width: 100%;
+    max-height: 240px;
+    border-radius: 8px;
+    display: block;
+  }
+  .msg-image-wrap .img-cap {
+    font-size: 12px;
+    color: var(--text-soft);
+    margin-top: 4px;
+    text-align: right;
+    padding: 0 4px 2px;
+  }
+
+  /* Drag-drop overlay */
+  .chat-panel { position: relative; }
+  .drop-overlay {
+    position: absolute;
+    inset: 8px;
+    background: rgba(217, 119, 87, 0.12);
+    border: 2px dashed var(--accent);
+    border-radius: 12px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 16px;
+    color: var(--accent);
+    font-weight: 600;
+    pointer-events: none;
+    z-index: 5;
+    backdrop-filter: blur(2px);
+  }
+  .chat-panel.dragging .drop-overlay { display: flex; }
+  .drop-overlay .drop-icon { font-size: 36px; }
+
+  /* Wide modal (chat record import) */
+  .modal-wide { width: 560px; max-width: 92vw; }
+  .modal-wide textarea {
+    width: 100%;
+    min-height: 200px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 13px;
+    background: var(--surface-soft);
+    resize: vertical;
+    font-family: inherit;
+    line-height: 1.6;
+  }
+  .modal-wide textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--text);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    opacity: 0;
+    transition: transform 0.25s, opacity 0.25s;
+    z-index: 1000;
+    pointer-events: none;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
   @media (max-width: 960px) {
     .main { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
     .panel:not(.chat-panel) { max-height: 200px; }
@@ -533,14 +707,24 @@
     </div>
 
     <!-- Center: Chat + Idea -->
-    <div class="panel chat-panel">
+    <div class="panel chat-panel" id="chat-panel">
       <div class="panel-header">
         <span class="panel-title">💬 对话</span>
         <button class="icon-btn" id="btn-clear-chat" title="清空对话">清空</button>
       </div>
+      <div class="drop-overlay">
+        <div class="drop-icon">🖼️</div>
+        松手添加图片
+      </div>
       <div class="chat-stream" id="chat-stream"></div>
       <div class="input-bar">
         <div class="input-row">
+          <div class="media-tools">
+            <button class="media-btn" id="btn-voice" title="语音输入">🎙️</button>
+            <button class="media-btn" id="btn-image" title="上传图片提取灵感">🖼️</button>
+            <button class="media-btn" id="btn-import" title="导入聊天记录 / 备忘录">📋</button>
+            <button class="media-btn" id="btn-search" title="搜灵感案例">🌐</button>
+          </div>
           <div class="input-box">
             <textarea id="user-input" rows="1" placeholder="说点什么…Agent 会自己决定是收录碎片、摇骰子还是闲聊"></textarea>
           </div>
@@ -550,6 +734,7 @@
             <span>摇骰子</span>
           </button>
         </div>
+        <input type="file" id="image-file" accept="image/*" style="display:none" />
       </div>
     </div>
 
@@ -566,6 +751,23 @@
           会出现在这里
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Import Modal -->
+<div class="modal-bg" id="import-modal">
+  <div class="modal modal-wide">
+    <h3>批量导入碎片</h3>
+    <p>
+      粘贴微信聊天记录、备忘录、笔记…<br/>
+      可以让 AI 帮你挑出有灵感价值的片段（忽略寒暄），或者按行原样导入全部。
+    </p>
+    <textarea id="import-textarea" placeholder="粘贴微信聊天记录、备忘录、笔记…"></textarea>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="import-cancel">取消</button>
+      <button class="btn-secondary" id="import-line">📋 按行导入</button>
+      <button class="btn-primary" id="import-ai">🤖 AI 智能提取</button>
     </div>
   </div>
 </div>
@@ -657,8 +859,9 @@ function renderFragments() {
     const isPicked = state.pickedFragmentIds.includes(f.id);
     const item = el('div', { className: 'fragment-item' + (isPicked ? ' picked' : '') });
     item.appendChild(el('div', { className: 'fragment-text', text: f.text }));
+    const mark = sourceMarker(f.source);
     item.appendChild(el('div', { className: 'fragment-meta', text:
-      formatTime(f.created) + (f.source ? ' · ' + f.source : '') }));
+      formatTime(f.created) + (mark ? ' · ' + mark : '') }));
     const del = el('button', { className: 'fragment-delete', text: '×' });
     del.onclick = () => deleteFragment(f.id);
     item.appendChild(del);
@@ -667,7 +870,7 @@ function renderFragments() {
   list.appendChild(wrap);
 }
 
-function addFragment(text, source = '手动') {
+function addFragment(text, source = '') {
   text = (text || '').trim();
   if (!text) return null;
   const f = { id: Date.now() + '-' + Math.random().toString(36).slice(2, 6),
@@ -676,6 +879,20 @@ function addFragment(text, source = '手动') {
   persist();
   renderFragments();
   return f;
+}
+
+// Source markers: typed text = no marker, voice=🎙️, image=🖼️, AI extract=🤖, line import=📋, web search=🌐
+const SOURCE_MARKERS = ['🎙️', '🖼️', '🤖', '📋', '🌐'];
+function sourceMarker(source) {
+  return SOURCE_MARKERS.includes(source) ? source : '';
+}
+
+// Single-shot source override for the next add_fragment call (used by voice input)
+let pendingFragmentSource = '';
+function consumePendingSource() {
+  const s = pendingFragmentSource;
+  pendingFragmentSource = '';
+  return s;
 }
 
 function deleteFragment(id) {
@@ -709,6 +926,15 @@ function renderMessage(m) {
   }
   if (m.kind === 'idea') {
     body.appendChild(renderIdeaCard(m.idea, m));
+  } else if (m.kind === 'extract') {
+    body.appendChild(renderExtractCard(m));
+  } else if (m.kind === 'image') {
+    const wrap2 = el('div', { className: 'msg-image-wrap' });
+    const img = el('img');
+    img.src = m.imageUrl;
+    wrap2.appendChild(img);
+    if (m.text) wrap2.appendChild(el('div', { className: 'img-cap', text: m.text }));
+    body.appendChild(wrap2);
   } else if (m.kind === 'typing') {
     const c = el('div', { className: 'msg-content' });
     c.appendChild(el('div', { className: 'typing',
@@ -723,6 +949,41 @@ function renderMessage(m) {
   }
   wrap.appendChild(body);
   return wrap;
+}
+
+function renderExtractCard(m) {
+  const card = el('div', { className: 'extract-card' });
+  card.appendChild(el('div', { className: 'extract-title',
+    text: (m.source ? m.source + ' ' : '') + (m.title || '提取了 ' + (m.fragments || []).length + ' 条碎片') }));
+  const list = el('div', { className: 'extract-list' });
+  const checked = new Set((m.fragments || []).map((_, i) => i));
+  (m.fragments || []).forEach((text, i) => {
+    const row = el('label', { className: 'extract-row' });
+    const cb = el('input', { type: 'checkbox' });
+    cb.checked = true;
+    cb.onchange = () => { if (cb.checked) checked.add(i); else checked.delete(i); };
+    row.appendChild(cb);
+    row.appendChild(el('span', { text }));
+    list.appendChild(row);
+  });
+  card.appendChild(list);
+  const actions = el('div', { className: 'extract-actions' });
+  const confirmBtn = el('button', { text: '加入碎片库' });
+  confirmBtn.onclick = () => {
+    let added = 0;
+    [...checked].sort((a, b) => a - b).forEach((i) => {
+      if (addFragment(m.fragments[i], m.source || '')) added++;
+    });
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = added > 0 ? `已加入 ${added} 条 ✨` : '没选任何条';
+    if (added > 0) {
+      pushMessage({ role: 'agent', kind: 'text',
+        text: `已收入 ${added} 条碎片到左边碎片库 ${m.source || ''}` });
+    }
+  };
+  actions.appendChild(confirmBtn);
+  card.appendChild(actions);
+  return card;
 }
 
 function toolCallLabel(name, input) {
@@ -960,7 +1221,7 @@ function pickRandom(arr, n) {
 async function executeTool(name, input) {
   switch (name) {
     case 'add_fragment': {
-      const f = addFragment(input.text || '', '对话');
+      const f = addFragment(input.text || '', consumePendingSource());
       if (!f) return '失败：文本为空，没有入库。';
       const tip = state.fragments.length >= 3
         ? ' 现在碎片够摇骰子了——可以邀请用户摇一次。'
@@ -1186,6 +1447,283 @@ async function rollDice() {
   }
 }
 
+// ============================================================
+// MULTI-MEDIA INPUT LAYER
+// ============================================================
+
+// ---------- Toast ----------
+function toast(msg, duration = 2800) {
+  const t = el('div', { className: 'toast', text: msg });
+  document.body.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => {
+    t.classList.remove('show');
+    setTimeout(() => t.remove(), 300);
+  }, duration);
+}
+
+// ---------- JSON array extraction ----------
+function parseFragmentArray(text) {
+  if (!text) return [];
+  // Try to find a JSON array in the text
+  const candidates = [];
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fence) candidates.push(fence[1]);
+  const bracket = text.match(/\[[\s\S]*\]/);
+  if (bracket) candidates.push(bracket[0]);
+  candidates.push(text);
+  for (const c of candidates) {
+    try {
+      const arr = JSON.parse(c.trim());
+      if (Array.isArray(arr)) {
+        return arr.map((s) => String(s).trim()).filter(Boolean);
+      }
+    } catch {}
+  }
+  return [];
+}
+
+// ---------- Voice input (Web Speech API) ----------
+let recognition = null;
+let isRecording = false;
+
+function toggleVoice() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    toast('语音输入需要 Chrome 浏览器');
+    return;
+  }
+  if (isRecording) {
+    if (recognition) recognition.stop();
+    return;
+  }
+  recognition = new SR();
+  recognition.lang = 'zh-CN';
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.onresult = (e) => {
+    const text = e.results[0][0].transcript;
+    const ta = $('user-input');
+    ta.value = (ta.value ? ta.value + ' ' : '') + text;
+    ta.dispatchEvent(new Event('input'));
+    ta.focus();
+    pendingFragmentSource = '🎙️';
+  };
+  recognition.onend = () => {
+    isRecording = false;
+    $('btn-voice').classList.remove('recording');
+  };
+  recognition.onerror = (e) => {
+    isRecording = false;
+    $('btn-voice').classList.remove('recording');
+    if (e.error && e.error !== 'aborted' && e.error !== 'no-speech') {
+      toast('语音识别出错：' + e.error);
+    }
+  };
+  try {
+    recognition.start();
+    isRecording = true;
+    $('btn-voice').classList.add('recording');
+  } catch (err) {
+    toast('启动语音失败：' + err.message);
+  }
+}
+
+// ---------- Image upload (vision) ----------
+function fileToDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+async function extractFragmentsFromImage(base64) {
+  const res = await fetch(API_BASE + '/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + state.apiKey
+    },
+    body: JSON.stringify({
+      model: 'glm-4v-flash',
+      max_tokens: 600,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'text', text: '观察这张图片，从中提取 1-4 条灵感碎片，每条简洁一句话（关注趣味元素、场景氛围、文字信息、色彩或意图）。严格按 JSON 数组格式回复：["碎片1","碎片2"]，不要任何其他文字。' },
+          { type: 'image_url', image_url: { url: base64 } }
+        ]
+      }]
+    })
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(res.status + '：' + txt.slice(0, 200));
+  }
+  const data = await res.json();
+  const content = data.choices?.[0]?.message?.content || '';
+  return parseFragmentArray(content);
+}
+
+async function handleImageFile(file) {
+  if (!file) return;
+  if (!file.type || !file.type.startsWith('image/')) {
+    toast('请选择图片文件');
+    return;
+  }
+  if (!state.apiKey) {
+    openSettings();
+    return;
+  }
+  let base64;
+  try {
+    base64 = await fileToDataURL(file);
+  } catch {
+    toast('读取图片失败');
+    return;
+  }
+  pushMessage({ role: 'user', kind: 'image', imageUrl: base64, text: '上传了一张图片' });
+  setTypingMessage(true);
+  try {
+    const fragments = await extractFragmentsFromImage(base64);
+    setTypingMessage(false);
+    if (!fragments || fragments.length === 0) {
+      pushMessage({ role: 'agent', kind: 'text',
+        text: '没从图里读出明显的灵感碎片，换张试试？或者直接说说图里你最有感觉的点。' });
+      return;
+    }
+    pushMessage({
+      role: 'agent',
+      kind: 'extract',
+      fragments,
+      source: '🖼️',
+      title: '从图片里提取了 ' + fragments.length + ' 条灵感'
+    });
+  } catch (err) {
+    setTypingMessage(false);
+    pushMessage({ role: 'agent', kind: 'text', text: '图片识别失败：' + err.message });
+  }
+}
+
+function pickImage() {
+  $('image-file').click();
+}
+
+// ---------- Drag & drop ----------
+function setupDragDrop() {
+  const panel = $('chat-panel');
+  let dragCounter = 0;
+  panel.addEventListener('dragenter', (e) => {
+    if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes('Files')) return;
+    e.preventDefault();
+    dragCounter++;
+    panel.classList.add('dragging');
+  });
+  panel.addEventListener('dragover', (e) => {
+    if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes('Files')) return;
+    e.preventDefault();
+  });
+  panel.addEventListener('dragleave', (e) => {
+    dragCounter = Math.max(0, dragCounter - 1);
+    if (dragCounter === 0) panel.classList.remove('dragging');
+  });
+  panel.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dragCounter = 0;
+    panel.classList.remove('dragging');
+    const file = e.dataTransfer?.files?.[0];
+    if (file) handleImageFile(file);
+  });
+}
+
+// ---------- Chat record import ----------
+function openImport() {
+  $('import-textarea').value = '';
+  $('import-modal').classList.add('show');
+  setTimeout(() => $('import-textarea').focus(), 50);
+}
+function closeImport() { $('import-modal').classList.remove('show'); }
+
+function importByLine() {
+  const text = $('import-textarea').value;
+  const lines = text.split('\n').map((s) => s.trim()).filter((s) => s.length > 0);
+  if (lines.length === 0) {
+    toast('没有可导入的内容');
+    return;
+  }
+  let count = 0;
+  lines.forEach((line) => { if (addFragment(line, '📋')) count++; });
+  closeImport();
+  pushMessage({ role: 'agent', kind: 'text',
+    text: `按行导入了 ${count} 条碎片 📋` });
+}
+
+async function importByAI() {
+  const text = $('import-textarea').value.trim();
+  if (!text) { toast('粘贴点内容先'); return; }
+  if (!state.apiKey) { openSettings(); return; }
+  const btn = $('import-ai');
+  const lineBtn = $('import-line');
+  btn.disabled = true;
+  lineBtn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = '提取中…';
+  try {
+    const res = await fetch(API_BASE + '/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + state.apiKey
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 1500,
+        temperature: 0.4,
+        messages: [{
+          role: 'user',
+          content: '从以下文字中提取有灵感价值的碎片，忽略寒暄（哈哈、好的、嗯嗯、收到）、礼貌用语、纯事务沟通，提取 3-10 条。每条一句话，保留原意。严格按 JSON 数组格式回复：["碎片1","碎片2"]，不要任何其他文字。\n\n---\n' + text
+        }]
+      })
+    });
+    if (!res.ok) {
+      const t = await res.text();
+      throw new Error(res.status + '：' + t.slice(0, 200));
+    }
+    const data = await res.json();
+    const content = data.choices?.[0]?.message?.content || '';
+    const fragments = parseFragmentArray(content);
+    closeImport();
+    if (fragments.length === 0) {
+      pushMessage({ role: 'agent', kind: 'text',
+        text: '没从这段文字里挑到合适的碎片。试试按行导入？' });
+      return;
+    }
+    pushMessage({
+      role: 'agent',
+      kind: 'extract',
+      fragments,
+      source: '🤖',
+      title: 'AI 从中提取了 ' + fragments.length + ' 条碎片'
+    });
+  } catch (err) {
+    pushMessage({ role: 'agent', kind: 'text', text: 'AI 提取失败：' + err.message });
+    closeImport();
+  } finally {
+    btn.disabled = false;
+    lineBtn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+// ---------- Search inspiration button ----------
+function openSearchPrompt() {
+  const q = prompt('想搜什么主题 / 案例？');
+  if (!q || !q.trim()) return;
+  runAgent('帮我搜一下「' + q.trim() + '」方向的产品案例');
+}
+
 // ---------- Settings ----------
 function openSettings() {
   $('api-key-input').value = state.apiKey;
@@ -1199,7 +1737,7 @@ function init() {
   // Fragment add
   $('fragment-add-btn').onclick = () => {
     const v = $('fragment-input').value;
-    if (addFragment(v, '手动')) $('fragment-input').value = '';
+    if (addFragment(v, '')) $('fragment-input').value = '';
   };
   $('fragment-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') $('fragment-add-btn').click();
@@ -1228,6 +1766,24 @@ function init() {
 
   // Dice
   $('dice-btn').onclick = () => rollDice();
+
+  // Multi-media inputs
+  $('btn-voice').onclick = () => toggleVoice();
+  $('btn-image').onclick = () => pickImage();
+  $('btn-import').onclick = () => openImport();
+  $('btn-search').onclick = () => openSearchPrompt();
+  $('image-file').addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (file) handleImageFile(file);
+    e.target.value = '';
+  });
+  $('import-cancel').onclick = closeImport;
+  $('import-line').onclick = importByLine;
+  $('import-ai').onclick = importByAI;
+  $('import-modal').onclick = (e) => {
+    if (e.target.id === 'import-modal') closeImport();
+  };
+  setupDragDrop();
 
   // Settings
   $('btn-settings').onclick = openSettings;
