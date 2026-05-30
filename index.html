@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>灵感骰子 Idea Dice</title>
+<style>
+  :root {
+    --bg: #faf6f1;
+    --surface: #ffffff;
+    --surface-soft: #fbf3ea;
+    --border: #ebe1d2;
+    --text: #2b2620;
+    --text-soft: #807468;
+    --accent: #d97757;
+    --accent-soft: #f2d8c8;
+    --purple: #8b7ab8;
+    --purple-soft: #e6dff0;
+    --shadow: 0 4px 16px rgba(120, 90, 60, 0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+      "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  input, textarea { font-family: inherit; }
+
+  /* Layout */
+  .app {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    height: 100vh;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 16px;
+  }
+  .brand-dot {
+    width: 28px; height: 28px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    font-size: 16px;
+    transform: rotate(-8deg);
+  }
+  .brand-sub {
+    color: var(--text-soft);
+    font-size: 12px;
+    font-weight: 400;
+    margin-left: 6px;
+  }
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+  .icon-btn {
+    padding: 6px 12px;
+    border-radius: 8px;
+    color: var(--text-soft);
+    font-size: 13px;
+    transition: background 0.15s;
+  }
+  .icon-btn:hover { background: var(--surface-soft); color: var(--text); }
+
+  .main {
+    display: grid;
+    grid-template-columns: 280px 1fr 300px;
+    gap: 16px;
+    padding: 16px;
+    overflow: hidden;
+  }
+  .panel {
+    background: var(--surface);
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .panel-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .panel-title {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .panel-count {
+    background: var(--surface-soft);
+    color: var(--text-soft);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+  }
+  .panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+  }
+
+  /* Fragment library */
+  .fragment-add {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 6px;
+  }
+  .fragment-add input {
+    flex: 1;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 13px;
+    background: var(--surface-soft);
+  }
+  .fragment-add input:focus { outline: none; border-color: var(--accent); background: #fff; }
+  .fragment-add button {
+    background: var(--accent);
+    color: #fff;
+    padding: 0 12px;
+    border-radius: 8px;
+    font-size: 13px;
+  }
+  .fragment-list { display: flex; flex-direction: column; gap: 8px; }
+  .fragment-item {
+    padding: 10px 12px;
+    background: var(--surface-soft);
+    border-radius: 10px;
+    font-size: 13px;
+    position: relative;
+    border: 1px solid transparent;
+    transition: border-color 0.15s;
+  }
+  .fragment-item:hover { border-color: var(--accent-soft); }
+  .fragment-item.picked { background: var(--accent-soft); border-color: var(--accent); }
+  .fragment-text { color: var(--text); padding-right: 18px; word-break: break-word; }
+  .fragment-meta { font-size: 11px; color: var(--text-soft); margin-top: 4px; }
+  .fragment-delete {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 18px; height: 18px;
+    border-radius: 4px;
+    color: var(--text-soft);
+    font-size: 14px;
+    display: none;
+    line-height: 1;
+  }
+  .fragment-item:hover .fragment-delete { display: block; }
+  .fragment-delete:hover { background: #fff; color: var(--accent); }
+
+  .empty {
+    color: var(--text-soft);
+    font-size: 13px;
+    text-align: center;
+    padding: 40px 16px;
+    line-height: 1.7;
+  }
+  .empty .big { font-size: 28px; margin-bottom: 8px; }
+
+  /* Chat panel */
+  .chat-panel { display: flex; flex-direction: column; }
+  .chat-stream {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .msg { display: flex; gap: 10px; max-width: 100%; }
+  .msg-avatar {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+  }
+  .msg-user .msg-avatar { background: var(--purple-soft); color: var(--purple); }
+  .msg-agent .msg-avatar { background: var(--accent-soft); color: var(--accent); }
+  .msg-body { flex: 1; min-width: 0; }
+  .msg-author { font-size: 12px; color: var(--text-soft); margin-bottom: 3px; }
+  .msg-content {
+    background: var(--surface-soft);
+    padding: 10px 14px;
+    border-radius: 12px;
+    border-top-left-radius: 4px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .msg-user .msg-content {
+    background: var(--purple-soft);
+    border-top-left-radius: 12px;
+    border-top-right-radius: 4px;
+  }
+  .msg-user { flex-direction: row-reverse; }
+  .msg-user .msg-body { text-align: right; }
+
+  /* Idea card */
+  .idea-card {
+    background: linear-gradient(135deg, #fff7ee 0%, #fef2e4 100%);
+    border: 1px solid var(--accent-soft);
+    border-radius: 14px;
+    padding: 18px;
+    margin-top: 6px;
+    box-shadow: var(--shadow);
+  }
+  .idea-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .idea-tag {
+    background: var(--accent);
+    color: #fff;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 10px;
+  }
+  .idea-title {
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--text);
+  }
+  .idea-section { margin-top: 12px; }
+  .idea-section-label {
+    font-size: 11px;
+    color: var(--text-soft);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+  .idea-section-body {
+    font-size: 13.5px;
+    color: var(--text);
+    line-height: 1.7;
+  }
+  .idea-from {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .idea-chip {
+    background: #fff;
+    border: 1px solid var(--border);
+    padding: 3px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    color: var(--text-soft);
+  }
+  .idea-chip.constraint {
+    border-color: var(--purple-soft);
+    color: var(--purple);
+    background: var(--purple-soft);
+  }
+  .idea-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--accent-soft);
+  }
+  .idea-actions button {
+    padding: 7px 12px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    background: #fff;
+    border: 1px solid var(--border);
+    transition: all 0.15s;
+  }
+  .idea-actions button:hover { border-color: var(--accent); color: var(--accent); }
+  .idea-actions .primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .idea-actions .primary:hover { background: #c5664a; }
+
+  /* Input bar */
+  .input-bar {
+    border-top: 1px solid var(--border);
+    padding: 14px 16px;
+    background: var(--surface);
+  }
+  .input-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+  .input-box {
+    flex: 1;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    background: var(--surface-soft);
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .input-box:focus-within { border-color: var(--accent); background: #fff; }
+  .input-box textarea {
+    flex: 1;
+    border: none;
+    background: transparent;
+    resize: none;
+    font-size: 14px;
+    line-height: 1.5;
+    max-height: 120px;
+    outline: none;
+  }
+  .send-btn {
+    background: var(--text);
+    color: #fff;
+    padding: 9px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    transition: opacity 0.15s;
+  }
+  .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .dice-btn {
+    background: linear-gradient(135deg, var(--accent) 0%, #e88a6c 100%);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 3px 10px rgba(217, 119, 87, 0.3);
+    transition: transform 0.15s;
+  }
+  .dice-btn:hover { transform: translateY(-1px); }
+  .dice-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .dice-icon {
+    display: inline-block;
+    animation: shake 0.5s ease-in-out;
+  }
+  @keyframes shake {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-15deg); }
+    75% { transform: rotate(15deg); }
+  }
+  .dice-btn.rolling .dice-icon { animation: shake 0.4s ease-in-out infinite; }
+
+  /* Pocket (saved ideas) */
+  .pocket-item {
+    background: var(--surface-soft);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .pocket-item:hover { border-color: var(--accent-soft); }
+  .pocket-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--text);
+    line-height: 1.4;
+  }
+  .pocket-desc {
+    font-size: 12px;
+    color: var(--text-soft);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .pocket-meta {
+    font-size: 11px;
+    color: var(--text-soft);
+    margin-top: 6px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .pocket-del {
+    color: var(--text-soft);
+    font-size: 12px;
+  }
+  .pocket-del:hover { color: var(--accent); }
+
+  /* Modal */
+  .modal-bg {
+    position: fixed; inset: 0;
+    background: rgba(40, 30, 20, 0.4);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  .modal-bg.show { display: flex; }
+  .modal {
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px;
+    width: 420px;
+    max-width: 92vw;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  }
+  .modal h3 { margin-bottom: 6px; font-size: 16px; }
+  .modal p { font-size: 13px; color: var(--text-soft); margin-bottom: 14px; line-height: 1.6; }
+  .modal input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    background: var(--surface-soft);
+  }
+  .modal input:focus { outline: none; border-color: var(--accent); background: #fff; }
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .modal-actions button {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-secondary { background: var(--surface-soft); color: var(--text); }
+  .modal a { color: var(--accent); text-decoration: none; }
+  .modal a:hover { text-decoration: underline; }
+
+  /* Tool call chip (Agent's tool-use trace) */
+  .msg-tool .msg-content {
+    background: transparent;
+    border: 1px dashed var(--border);
+    color: var(--text-soft);
+    font-size: 12px;
+    padding: 6px 12px;
+    display: inline-block;
+    border-radius: 999px;
+  }
+  .msg-tool .msg-content .tool-name {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* Loading */
+  .typing {
+    display: inline-flex;
+    gap: 3px;
+    padding: 4px 0;
+  }
+  .typing span {
+    width: 6px; height: 6px;
+    background: var(--text-soft);
+    border-radius: 50%;
+    animation: typing 1.2s infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typing {
+    0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+    30% { opacity: 1; transform: translateY(-3px); }
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #d4c5ad; }
+
+  @media (max-width: 960px) {
+    .main { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
+    .panel:not(.chat-panel) { max-height: 200px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <div class="brand-dot">🎲</div>
+      <span>灵感骰子</span>
+      <span class="brand-sub">Idea Dice · 让碎片碰撞出新 idea</span>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="btn-settings" title="API Key 设置">⚙️ 设置</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <!-- Left: Fragment Library -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">📚 碎片库</span>
+        <span class="panel-count" id="fragment-count">0</span>
+      </div>
+      <div class="fragment-add">
+        <input id="fragment-input" placeholder="加一条碎片…" maxlength="200" />
+        <button id="fragment-add-btn">+</button>
+      </div>
+      <div class="panel-body" id="fragment-list">
+        <div class="empty">
+          <div class="big">🪶</div>
+          先攒点碎片吧<br/>
+          一句话、一个观察都行
+        </div>
+      </div>
+    </div>
+
+    <!-- Center: Chat + Idea -->
+    <div class="panel chat-panel">
+      <div class="panel-header">
+        <span class="panel-title">💬 对话</span>
+        <button class="icon-btn" id="btn-clear-chat" title="清空对话">清空</button>
+      </div>
+      <div class="chat-stream" id="chat-stream"></div>
+      <div class="input-bar">
+        <div class="input-row">
+          <div class="input-box">
+            <textarea id="user-input" rows="1" placeholder="说点什么…Agent 会自己决定是收录碎片、摇骰子还是闲聊"></textarea>
+          </div>
+          <button class="send-btn" id="send-btn">发送</button>
+          <button class="dice-btn" id="dice-btn" title="摇骰子">
+            <span class="dice-icon">🎲</span>
+            <span>摇骰子</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Pocket -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">✨ 灵感口袋</span>
+        <span class="panel-count" id="pocket-count">0</span>
+      </div>
+      <div class="panel-body" id="pocket-list">
+        <div class="empty">
+          <div class="big">🪄</div>
+          收藏的 idea<br/>
+          会出现在这里
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- API Key Modal -->
+<div class="modal-bg" id="settings-modal">
+  <div class="modal">
+    <h3>设置智谱 API Key</h3>
+    <p>
+      灵感骰子直接在浏览器里调用智谱 BigModel（GLM）API。<br/>
+      Key 只保存在你本地的 localStorage，不会上传任何地方。<br/>
+      没有 Key？<a href="https://open.bigmodel.cn/usercenter/apikeys" target="_blank">去 BigModel 控制台申请</a>。
+    </p>
+    <input id="api-key-input" type="password" placeholder="智谱 API Key（形如 xxxxx.yyyyy）" />
+    <div class="modal-actions">
+      <button class="btn-secondary" id="settings-cancel">取消</button>
+      <button class="btn-primary" id="settings-save">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// 灵感骰子 Idea Dice - MVP (Agent + Tool Use, 智谱 BigModel)
+// ============================================================
+
+const API_BASE = 'https://open.bigmodel.cn/api/paas/v4';
+const MODEL = 'glm-4.5'; // 也可以换成 'glm-4.6' / 'glm-4-plus' / 'glm-4-air'
+const MAX_AGENT_ITERATIONS = 5;
+
+const CONSTRAINTS = {
+  '🎯 目标人群': ['独居青年', '通勤族', '新手父母', '远程工作者', '大学生', '数字游民',
+    '宠物主人', '小店店主', '城市漫步者', '自由职业者', '退休长辈'],
+  '🎭 情绪': ['治愈', '兴奋', '专注', '平静', '勇气', '温暖', '好奇', '解压', '浪漫', '荒诞', '怀旧'],
+  '🧩 形式': ['小游戏', '日记本', '社区', '周报', '播客', '实体产品', '浏览器插件',
+    '微信小程序', '线上工作坊', '卡牌组', 'newsletter'],
+  '🌙 场景': ['通勤路上', '睡前', '等外卖时', '周末下午', '雨天', '深夜', '聚会',
+    '排队中', '失眠夜', '散步时', '咖啡馆里'],
+  '⚙️ 技术': ['语音交互', 'AR增强', 'AI生成', '区块链存证', '物联网', '纯手工',
+    'Vibe Coding', '地图定位', '摄像头识别', '蓝牙连接', '本地优先']
+};
+
+// ---------- State ----------
+const state = {
+  apiKey: localStorage.getItem('idea-dice:apiKey') || '',
+  fragments: JSON.parse(localStorage.getItem('idea-dice:fragments') || '[]'),
+  pocket: JSON.parse(localStorage.getItem('idea-dice:pocket') || '[]'),
+  chat: JSON.parse(localStorage.getItem('idea-dice:chat') || '[]'),
+  pickedFragmentIds: [],
+  rolling: false,
+};
+
+function persist() {
+  localStorage.setItem('idea-dice:apiKey', state.apiKey);
+  localStorage.setItem('idea-dice:fragments', JSON.stringify(state.fragments));
+  localStorage.setItem('idea-dice:pocket', JSON.stringify(state.pocket));
+  localStorage.setItem('idea-dice:chat', JSON.stringify(state.chat.slice(-50)));
+}
+
+// ---------- DOM helpers ----------
+const $ = (id) => document.getElementById(id);
+function el(tag, props = {}, children = []) {
+  const e = document.createElement(tag);
+  Object.entries(props).forEach(([k, v]) => {
+    if (k === 'className') e.className = v;
+    else if (k === 'onClick') e.onclick = v;
+    else if (k === 'html') e.innerHTML = v;
+    else if (k === 'text') e.textContent = v;
+    else e.setAttribute(k, v);
+  });
+  (Array.isArray(children) ? children : [children]).forEach((c) => {
+    if (c) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+  });
+  return e;
+}
+
+// ---------- Fragment library ----------
+function renderFragments() {
+  const list = $('fragment-list');
+  list.innerHTML = '';
+  $('fragment-count').textContent = state.fragments.length;
+  if (state.fragments.length === 0) {
+    list.appendChild(el('div', { className: 'empty', html:
+      '<div class="big">🪶</div>先攒点碎片吧<br/>一句话、一个观察都行' }));
+    return;
+  }
+  const wrap = el('div', { className: 'fragment-list' });
+  state.fragments.slice().reverse().forEach((f) => {
+    const isPicked = state.pickedFragmentIds.includes(f.id);
+    const item = el('div', { className: 'fragment-item' + (isPicked ? ' picked' : '') });
+    item.appendChild(el('div', { className: 'fragment-text', text: f.text }));
+    item.appendChild(el('div', { className: 'fragment-meta', text:
+      formatTime(f.created) + (f.source ? ' · ' + f.source : '') }));
+    const del = el('button', { className: 'fragment-delete', text: '×' });
+    del.onclick = () => deleteFragment(f.id);
+    item.appendChild(del);
+    wrap.appendChild(item);
+  });
+  list.appendChild(wrap);
+}
+
+function addFragment(text, source = '手动') {
+  text = (text || '').trim();
+  if (!text) return null;
+  const f = { id: Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    text, source, created: Date.now() };
+  state.fragments.push(f);
+  persist();
+  renderFragments();
+  return f;
+}
+
+function deleteFragment(id) {
+  state.fragments = state.fragments.filter((f) => f.id !== id);
+  persist();
+  renderFragments();
+}
+
+// ---------- Chat ----------
+function renderChat() {
+  const stream = $('chat-stream');
+  stream.innerHTML = '';
+  if (state.chat.length === 0) {
+    stream.appendChild(el('div', { className: 'empty', html:
+      '<div class="big">🎲</div>欢迎来灵感骰子<br/>'
+      + '左边攒碎片，攒到 2 条以上就能摇骰子碰撞 idea 了'
+    }));
+    return;
+  }
+  state.chat.forEach((m) => stream.appendChild(renderMessage(m)));
+  stream.scrollTop = stream.scrollHeight;
+}
+
+function renderMessage(m) {
+  const isTool = m.kind === 'tool_call';
+  const wrap = el('div', { className: 'msg msg-' + m.role + (isTool ? ' msg-tool' : '') });
+  wrap.appendChild(el('div', { className: 'msg-avatar', text: m.role === 'user' ? '我' : '🎲' }));
+  const body = el('div', { className: 'msg-body' });
+  if (!isTool) {
+    body.appendChild(el('div', { className: 'msg-author', text: m.role === 'user' ? '我' : '灵感骰子' }));
+  }
+  if (m.kind === 'idea') {
+    body.appendChild(renderIdeaCard(m.idea, m));
+  } else if (m.kind === 'typing') {
+    const c = el('div', { className: 'msg-content' });
+    c.appendChild(el('div', { className: 'typing',
+      html: '<span></span><span></span><span></span>' }));
+    body.appendChild(c);
+  } else if (m.kind === 'tool_call') {
+    const c = el('div', { className: 'msg-content' });
+    c.appendChild(el('span', { html: toolCallLabel(m.tool, m.input) }));
+    body.appendChild(c);
+  } else {
+    body.appendChild(el('div', { className: 'msg-content', text: m.text }));
+  }
+  wrap.appendChild(body);
+  return wrap;
+}
+
+function toolCallLabel(name, input) {
+  const escape = (s) => String(s || '').replace(/[<>&"]/g, (c) =>
+    ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+  switch (name) {
+    case 'add_fragment':
+      return '🪶 <span class="tool-name">收录碎片</span>：「' + escape((input.text || '').slice(0, 40)) + '」';
+    case 'roll_dice':
+      return '🎲 <span class="tool-name">摇骰子</span>…';
+    case 'analyze_fragments':
+      return '🔍 <span class="tool-name">分析碎片库</span>…';
+    case 'present_idea':
+      return '✨ <span class="tool-name">生成 idea</span>';
+    default:
+      return '🔧 <span class="tool-name">' + escape(name) + '</span>';
+  }
+}
+
+function renderIdeaCard(idea, msg) {
+  const card = el('div', { className: 'idea-card' });
+  const header = el('div', { className: 'idea-card-header' });
+  header.appendChild(el('span', { className: 'idea-tag', text: '🎲 摇出来了' }));
+  card.appendChild(header);
+  card.appendChild(el('div', { className: 'idea-title', text: idea.title || '(无标题)' }));
+
+  if (idea.description) {
+    const sec = el('div', { className: 'idea-section' });
+    sec.appendChild(el('div', { className: 'idea-section-label', text: '是什么' }));
+    sec.appendChild(el('div', { className: 'idea-section-body', text: idea.description }));
+    card.appendChild(sec);
+  }
+  if (idea.connection) {
+    const sec = el('div', { className: 'idea-section' });
+    sec.appendChild(el('div', { className: 'idea-section-label', text: '意外的关联' }));
+    sec.appendChild(el('div', { className: 'idea-section-body', text: idea.connection }));
+    card.appendChild(sec);
+  }
+  if (idea.mvp) {
+    const sec = el('div', { className: 'idea-section' });
+    sec.appendChild(el('div', { className: 'idea-section-label', text: '今天就能动手的 MVP' }));
+    sec.appendChild(el('div', { className: 'idea-section-body', text: idea.mvp }));
+    card.appendChild(sec);
+  }
+  if (msg && (msg.fromFragments || msg.constraint)) {
+    const sec = el('div', { className: 'idea-section' });
+    sec.appendChild(el('div', { className: 'idea-section-label', text: '骰子摇到了' }));
+    const chips = el('div', { className: 'idea-from' });
+    (msg.fromFragments || []).forEach((t) => {
+      chips.appendChild(el('span', { className: 'idea-chip', text: t }));
+    });
+    if (msg.constraint) {
+      chips.appendChild(el('span', { className: 'idea-chip constraint',
+        text: msg.constraint.dim + ' · ' + msg.constraint.val }));
+    }
+    sec.appendChild(chips);
+    card.appendChild(sec);
+  }
+
+  const actions = el('div', { className: 'idea-actions' });
+  const saved = state.pocket.some((p) => p.ideaId === msg.id);
+  const saveBtn = el('button', { className: saved ? '' : 'primary',
+    text: saved ? '已收藏' : '⭐ 收藏到口袋' });
+  saveBtn.onclick = () => {
+    if (saved) return;
+    saveIdea(msg);
+    renderChat();
+  };
+  actions.appendChild(saveBtn);
+  const reRoll = el('button', { text: '🎲 再摇一次' });
+  reRoll.onclick = () => rollDice();
+  actions.appendChild(reRoll);
+  card.appendChild(actions);
+  return card;
+}
+
+function pushMessage(m) {
+  m.id = m.id || (Date.now() + '-' + Math.random().toString(36).slice(2, 6));
+  state.chat.push(m);
+  persist();
+  renderChat();
+  return m;
+}
+
+function setTypingMessage(on) {
+  state.chat = state.chat.filter((m) => m.kind !== 'typing');
+  if (on) state.chat.push({ id: 'typing', role: 'agent', kind: 'typing' });
+  renderChat();
+}
+
+// ---------- Pocket ----------
+function renderPocket() {
+  const list = $('pocket-list');
+  list.innerHTML = '';
+  $('pocket-count').textContent = state.pocket.length;
+  if (state.pocket.length === 0) {
+    list.appendChild(el('div', { className: 'empty', html:
+      '<div class="big">🪄</div>收藏的 idea<br/>会出现在这里' }));
+    return;
+  }
+  state.pocket.slice().reverse().forEach((p) => {
+    const item = el('div', { className: 'pocket-item' });
+    item.appendChild(el('div', { className: 'pocket-title', text: p.idea.title }));
+    item.appendChild(el('div', { className: 'pocket-desc', text: p.idea.description || '' }));
+    const meta = el('div', { className: 'pocket-meta' });
+    meta.appendChild(el('span', { text: formatTime(p.created) }));
+    const del = el('button', { className: 'pocket-del', text: '删除' });
+    del.onclick = (e) => { e.stopPropagation(); deletePocket(p.id); };
+    meta.appendChild(del);
+    item.appendChild(meta);
+    item.onclick = () => alert(formatIdeaForCopy(p.idea));
+    list.appendChild(item);
+  });
+}
+
+function saveIdea(msg) {
+  state.pocket.push({
+    id: Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    ideaId: msg.id,
+    idea: msg.idea,
+    fromFragments: msg.fromFragments || [],
+    constraint: msg.constraint || null,
+    created: Date.now(),
+  });
+  persist();
+  renderPocket();
+}
+
+function deletePocket(id) {
+  state.pocket = state.pocket.filter((p) => p.id !== id);
+  persist();
+  renderPocket();
+}
+
+function formatIdeaForCopy(idea) {
+  return `${idea.title}\n\n${idea.description || ''}\n\n意外的关联：\n${idea.connection || ''}\n\nMVP：\n${idea.mvp || ''}`;
+}
+
+// ---------- Time format ----------
+function formatTime(ts) {
+  const d = new Date(ts);
+  const now = new Date();
+  const sameDay = d.toDateString() === now.toDateString();
+  if (sameDay) return d.toTimeString().slice(0, 5);
+  return (d.getMonth() + 1) + '/' + d.getDate();
+}
+
+// ============================================================
+// AGENT LAYER (Tool Use)
+// ============================================================
+
+const TOOLS = [
+  {
+    type: 'function',
+    function: {
+      name: 'add_fragment',
+      description: '把用户分享的一个独立想法/观察/感受/引用作为新碎片存入碎片库。判断标准：用户的话像在分享一个灵感单元（例如"我觉得…"、"今天看到…"、"听说…"、引用一句话、一个短观察）。不要在用户单纯打招呼、问问题、或表达情绪时调用。',
+      parameters: {
+        type: 'object',
+        properties: {
+          text: { type: 'string', description: '整理后的碎片文本，去掉"我觉得/我想说/我看到"等口语化开头，但保留原意。' }
+        },
+        required: ['text']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'roll_dice',
+      description: '从用户的碎片库中随机抽 2-3 条碎片 + 1 个约束维度，用来碰撞出新 idea。在用户说"摇骰子/来一个/碰一下/给我灵感"或同类意图时调用。调用后会拿到抽到的碎片和约束，你必须紧接着调用 present_idea 来展示一个具体 idea。',
+      parameters: { type: 'object', properties: {} }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'present_idea',
+      description: '把碰撞出来的 idea 用结构化卡片展示给用户。必须紧跟在 roll_dice 之后调用。idea 要有钩子，关联点要意想不到，MVP 要具体可执行。',
+      parameters: {
+        type: 'object',
+        properties: {
+          title: { type: 'string', description: '一句话产品/项目标题，<20字，要有钩子' },
+          description: { type: 'string', description: '3-4 句描述这是什么、怎么运作' },
+          connection: { type: 'string', description: '解释抽到的碎片之间意想不到的关联点（2-3 句）' },
+          mvp: { type: 'string', description: '今天就能动手的最小可行版本，要具体到"第一步做什么"（2-3 句）' }
+        },
+        required: ['title', 'description', 'connection', 'mvp']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'analyze_fragments',
+      description: '当用户想了解自己碎片库的特征、主题、共同点时调用，例如"看看我攒的碎片"、"我的碎片有什么共同点"、"帮我整理一下"。返回当前所有碎片，由你用文字回复分析结果。',
+      parameters: { type: 'object', properties: {} }
+    }
+  }
+];
+
+let lastDicePick = null;
+
+function pickRandom(arr, n) {
+  const a = arr.slice();
+  const r = [];
+  while (r.length < n && a.length) {
+    r.push(a.splice(Math.floor(Math.random() * a.length), 1)[0]);
+  }
+  return r;
+}
+
+async function executeTool(name, input) {
+  switch (name) {
+    case 'add_fragment': {
+      const f = addFragment(input.text || '', '对话');
+      if (!f) return '失败：文本为空，没有入库。';
+      const tip = state.fragments.length >= 3
+        ? ' 现在碎片够摇骰子了——可以邀请用户摇一次。'
+        : '';
+      return `已存入碎片库：「${f.text}」。当前碎片库共 ${state.fragments.length} 条。` + tip;
+    }
+    case 'roll_dice': {
+      if (state.fragments.length < 2) {
+        return '失败：碎片库少于 2 条，无法摇骰子。请用一两句话提醒用户先攒至少 2 条碎片。';
+      }
+      const n = Math.min(state.fragments.length, Math.random() < 0.5 ? 2 : 3);
+      const picked = pickRandom(state.fragments, n);
+      const dims = Object.keys(CONSTRAINTS);
+      const dim = dims[Math.floor(Math.random() * dims.length)];
+      const val = CONSTRAINTS[dim][Math.floor(Math.random() * CONSTRAINTS[dim].length)];
+      lastDicePick = { picked, constraint: { dim, val } };
+      state.pickedFragmentIds = picked.map((f) => f.id);
+      renderFragments();
+      setTimeout(() => { state.pickedFragmentIds = []; renderFragments(); }, 8000);
+      return `骰子结果：
+碎片：
+${picked.map((f, i) => `${i + 1}. 「${f.text}」`).join('\n')}
+约束维度：${dim} = ${val}
+
+接下来请把这几个碎片碰撞成一个 idea，然后立刻调用 present_idea 工具。要点：
+- 找真正意想不到的关联点（不要套话、不要"它们都关于人性"这种废话）
+- MVP 要具体到"今天的第一步做什么"
+- 标题要有钩子，<20 字`;
+    }
+    case 'present_idea': {
+      pushMessage({
+        role: 'agent',
+        kind: 'idea',
+        idea: {
+          title: input.title || '',
+          description: input.description || '',
+          connection: input.connection || '',
+          mvp: input.mvp || ''
+        },
+        fromFragments: lastDicePick?.picked?.map((f) => f.text) || [],
+        constraint: lastDicePick?.constraint || null
+      });
+      return 'idea 卡片已展示给用户。再用一句话邀请用户收藏或再摇一次。';
+    }
+    case 'analyze_fragments': {
+      if (state.fragments.length === 0) return '碎片库为空，提醒用户先攒一些。';
+      return '当前碎片库（共 ' + state.fragments.length + ' 条）：\n'
+        + state.fragments.map((f, i) => `${i + 1}. ${f.text}`).join('\n')
+        + '\n\n请用 3-5 句话分析这些碎片的主题、共同点、隐藏的兴趣方向，给用户一个有启发的观察。';
+    }
+    default:
+      return '未知工具：' + name;
+  }
+}
+
+function buildSystemPrompt() {
+  const recent = state.fragments.slice(-5).map((f) => '「' + f.text + '」').join('，');
+  const recentLine = state.fragments.length > 0 ? '，最近的几条：' + recent : '';
+  return `你是"灵感骰子 Idea Dice"——一个帮创作者从日常积累的碎片灵感中碰撞出可执行 idea 的 AI Agent。
+
+工作方式：
+- 用户分享想法/观察/感受/引用 → 用 add_fragment 工具存入碎片库
+- 用户说"摇骰子/来一个/碰一下/给我灵感" → 先调用 roll_dice，拿到结果后立即调用 present_idea
+- 用户想了解自己碎片库 → 用 analyze_fragments，然后用文字给出洞察
+- 用户单纯闲聊、问问题、表达情绪 → 直接用文字回复，不要乱调用工具
+
+风格：温暖、轻松、像创意搭子，回复要短（1-2 句）。一律中文。
+当前碎片库共 ${state.fragments.length} 条${recentLine}。`;
+}
+
+async function callLLMWithTools(messages) {
+  if (!state.apiKey) {
+    openSettings();
+    throw new Error('请先设置 API Key');
+  }
+  const payload = {
+    model: MODEL,
+    max_tokens: 1500,
+    temperature: 0.8,
+    messages: [{ role: 'system', content: buildSystemPrompt() }, ...messages],
+    tools: TOOLS,
+    tool_choice: 'auto'
+  };
+  const res = await fetch(API_BASE + '/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + state.apiKey
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error('API 错误 ' + res.status + '：' + txt.slice(0, 200));
+  }
+  return res.json();
+}
+
+function safeParseArgs(raw) {
+  if (!raw) return {};
+  if (typeof raw === 'object') return raw;
+  try { return JSON.parse(raw); } catch { return {}; }
+}
+
+async function runAgent(userText) {
+  pushMessage({ role: 'user', kind: 'text', text: userText });
+  const apiMessages = [{ role: 'user', content: userText }];
+  let iter = 0;
+
+  while (iter++ < MAX_AGENT_ITERATIONS) {
+    setTypingMessage(true);
+    let resp;
+    try {
+      resp = await callLLMWithTools(apiMessages);
+    } catch (err) {
+      setTypingMessage(false);
+      pushMessage({ role: 'agent', kind: 'text', text: '出错了：' + err.message });
+      return;
+    }
+    setTypingMessage(false);
+
+    const choice = resp.choices && resp.choices[0];
+    if (!choice || !choice.message) {
+      pushMessage({ role: 'agent', kind: 'text', text: '模型没有返回内容。' });
+      return;
+    }
+    const msg = choice.message;
+    const text = (msg.content || '').trim();
+    const toolCalls = msg.tool_calls || [];
+
+    // Preserve assistant turn (with tool_calls) in API history
+    apiMessages.push({
+      role: 'assistant',
+      content: msg.content || '',
+      ...(toolCalls.length ? { tool_calls: toolCalls } : {})
+    });
+
+    for (const tc of toolCalls) {
+      const fname = tc.function?.name;
+      if (fname && fname !== 'present_idea') {
+        pushMessage({
+          role: 'agent', kind: 'tool_call',
+          tool: fname,
+          input: safeParseArgs(tc.function?.arguments)
+        });
+      }
+    }
+    if (text) {
+      pushMessage({ role: 'agent', kind: 'text', text });
+    }
+
+    const finish = choice.finish_reason;
+    if (finish !== 'tool_calls' || toolCalls.length === 0) break;
+
+    for (const tc of toolCalls) {
+      const fname = tc.function?.name || '';
+      const args = safeParseArgs(tc.function?.arguments);
+      const result = await executeTool(fname, args);
+      apiMessages.push({
+        role: 'tool',
+        tool_call_id: tc.id,
+        content: typeof result === 'string' ? result : JSON.stringify(result)
+      });
+    }
+  }
+}
+
+function handleUserInput(text) {
+  return runAgent(text);
+}
+
+async function rollDice() {
+  if (state.rolling) return;
+  if (state.fragments.length < 2) {
+    pushMessage({ role: 'agent', kind: 'text',
+      text: '碎片还太少啦（需要至少 2 条）。先攒点儿想法，左边可以直接加，或者跟我聊天我帮你存～' });
+    return;
+  }
+  state.rolling = true;
+  $('dice-btn').classList.add('rolling');
+  $('dice-btn').disabled = true;
+  try {
+    await runAgent('摇骰子');
+  } finally {
+    state.rolling = false;
+    $('dice-btn').classList.remove('rolling');
+    $('dice-btn').disabled = false;
+  }
+}
+
+// ---------- Settings ----------
+function openSettings() {
+  $('api-key-input').value = state.apiKey;
+  $('settings-modal').classList.add('show');
+  setTimeout(() => $('api-key-input').focus(), 50);
+}
+function closeSettings() { $('settings-modal').classList.remove('show'); }
+
+// ---------- Event wiring ----------
+function init() {
+  // Fragment add
+  $('fragment-add-btn').onclick = () => {
+    const v = $('fragment-input').value;
+    if (addFragment(v, '手动')) $('fragment-input').value = '';
+  };
+  $('fragment-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') $('fragment-add-btn').click();
+  });
+
+  // Chat send
+  const ta = $('user-input');
+  const send = () => {
+    const v = ta.value.trim();
+    if (!v) return;
+    ta.value = '';
+    ta.style.height = 'auto';
+    handleUserInput(v);
+  };
+  $('send-btn').onclick = send;
+  ta.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
+  });
+  ta.addEventListener('input', () => {
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+  });
+
+  // Dice
+  $('dice-btn').onclick = () => rollDice();
+
+  // Settings
+  $('btn-settings').onclick = openSettings;
+  $('settings-cancel').onclick = closeSettings;
+  $('settings-save').onclick = () => {
+    const v = $('api-key-input').value.trim();
+    if (!v) return;
+    state.apiKey = v;
+    persist();
+    closeSettings();
+  };
+  $('settings-modal').onclick = (e) => {
+    if (e.target.id === 'settings-modal') closeSettings();
+  };
+
+  // Clear chat
+  $('btn-clear-chat').onclick = () => {
+    if (!confirm('清空当前对话？（碎片库和灵感口袋不会被清空）')) return;
+    state.chat = [];
+    persist();
+    renderChat();
+  };
+
+  // Initial render
+  renderFragments();
+  renderChat();
+  renderPocket();
+
+  // First-time prompt
+  if (!state.apiKey) {
+    setTimeout(() => openSettings(), 400);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
