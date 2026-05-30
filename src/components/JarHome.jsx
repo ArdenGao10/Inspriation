@@ -217,11 +217,23 @@ function SynthSequence({ onDone, pending }) {
 // ── PAGE · result ──
 function PageResult({ onBack, onAgain, onExpand, result, err }) {
   const [saved, setSaved] = React.useState(false);
+  const idsRef = React.useRef(null); // 收藏后记下 {savedId, fragId}，取消时两边都撤销
   const r = result || { lead: '给独居老人的', accent: '方言会议助手', blurb: '', sources: ['周会复盘', '方言天气', '截图美化器'], constraint: '' };
   const toggleSave = () => {
+    if (!result) return;
     setSaved((s) => {
       const next = !s;
-      if (next && result) Store.addSaved({ lead: r.lead, accent: r.accent, blurb: r.blurb, sources: r.sources });
+      if (next) {
+        // 「收藏进罐」：既存进收藏，也作为一条新素材回灌进灵感罐（罐子数 +1，可被再次摇到）
+        const it = Store.addSaved({ lead: r.lead, accent: r.accent, blurb: r.blurb, sources: r.sources });
+        const title = `${r.lead ? r.lead + ' ' : ''}${r.accent || ''}`.trim();
+        const fragId = title ? Store.addFragment(title) : null;
+        idsRef.current = { savedId: it.id, fragId };
+      } else if (idsRef.current) {
+        Store.removeSaved(idsRef.current.savedId);
+        if (idsRef.current.fragId) Store.removeFragment(idsRef.current.fragId);
+        idsRef.current = null;
+      }
       return next;
     });
   };
