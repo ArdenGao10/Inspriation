@@ -55,6 +55,18 @@
   - 新增响应式外壳：`.app-outer` + `.app-frame`（移动端全屏 100dvh / 桌面端居中列，max-width 480px）。
 - 无头 Chrome 验证：`phone-wrap` 与 `9:41` 已移除，首页正常渲染、无报错。
 
+## 步骤 6 · 文案修改 + 桌面端全屏铺满
+
+- **文案**：所有 "vibe coder" → "builder"（侧边栏副标题「给 builder 的灵感引擎」、我的页身份标签「builder · 灵感 Lv.4」、`store.js` 注释）。
+- **移除**侧边栏底部的版本信息「v0.1 · 智谱 BigModel」，连同 `flex: 1` 占位 spacer 一起删掉，导航更干净。
+- **桌面端布局全屏铺满**（用户反馈两边留大片空白）：
+  - `.app-shell` 删除 `max-width: 1200px` 和 `box-shadow`，宽度跟随浏览器。
+  - `.app-content` 删除 `max-width: 720px; margin: 0 auto`，跟随父级 `.app-main` 的 `flex: 1` 撑满右侧剩余宽度。
+  - `.app-outer` 不再 `justify-content: center`、背景改成与 app-shell 同色（避免空隙）。
+  - 侧边栏保留 `flex: 0 0 240px` 固定宽度不变。
+  - 卡片 / 对话气泡仍可以用各自的 `maxWidth` 居中，但内容区背景全宽铺满。
+- `npm run build` 验证通过（42 模块，无新增报错）。
+
 ---
 
 ## 待办（后续步骤）

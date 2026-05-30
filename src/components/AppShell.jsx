@@ -17,7 +17,7 @@ function SideNav({ active, onChange }) {
     <nav className="side-nav">
       <div style={{ padding: '4px 12px 22px' }}>
         <div style={{ fontFamily: G.serif, fontSize: 22, color: G.ink, letterSpacing: 0.5 }}>灵感搜集器</div>
-        <div style={{ fontSize: 11.5, color: G.inkFaint, marginTop: 5, letterSpacing: 0.4 }}>给 vibe coder 的灵感引擎</div>
+        <div style={{ fontSize: 11.5, color: G.inkFaint, marginTop: 5, letterSpacing: 0.4 }}>给 builder 的灵感引擎</div>
       </div>
       {APP_TABS.map((t) => {
         const on = t.k === active;
@@ -30,8 +30,6 @@ function SideNav({ active, onChange }) {
           </div>
         );
       })}
-      <div style={{ flex: 1 }} />
-      <div style={{ padding: '0 14px', fontSize: 11, color: G.inkFaint, letterSpacing: 0.3 }}>v0.1 · 智谱 BigModel</div>
     </nav>
   );
 }

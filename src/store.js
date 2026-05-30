@@ -2,7 +2,7 @@
 // 极简外部 store（subscribe/get/set）+ React useSyncExternalStore 绑定。
 import { useSyncExternalStore } from 'react';
 
-// 灵感罐种子素材（vibe coder 日常碎片）。首次进入写入 localStorage，之后以本地为准。
+// 灵感罐种子素材（builder 日常碎片）。首次进入写入 localStorage，之后以本地为准。
 export const SEED_FRAGMENTS = [
   '周会复盘总忘记记要点', '想给独居老人做一句话方言天气播报', '代码截图美化器，分享到社区好看',
   '通勤听播客记不住重点', '宠物喂食容易忘，想要打卡墙', '深夜冒出的灵感第二天就忘了',

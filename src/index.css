@@ -11,18 +11,19 @@ html, body { margin: 0; height: 100%; background: #FDFBF4; font-family: "PingFan
 .app-content { flex: 1; min-height: 0; position: relative; overflow: hidden; }
 .side-nav { display: none; }
 
-/* 桌面端（≥900px）：左侧边栏 + 宽内容区，真正的 Web 形态 */
+/* 桌面端（≥900px）：左侧边栏固定宽 + 右侧内容区铺满剩余宽度 */
 @media (min-width: 900px) {
-  .app-outer { background: #ece9e2; display: flex; justify-content: center; }
-  .app-shell { flex-direction: row; width: 100%; max-width: 1200px; height: 100dvh; box-shadow: 0 12px 70px rgba(120,90,30,0.14); }
+  .app-outer { background: #FEFDF8; }
+  .app-shell { flex-direction: row; width: 100%; height: 100dvh; }
   .side-nav {
     display: flex; flex-direction: column; gap: 4px;
     flex: 0 0 240px; width: 240px; padding: 30px 16px 22px;
     border-right: 1px solid rgba(70,58,30,0.06);
     background: linear-gradient(180deg, #FCF7EA, #FEFDF8 60%);
   }
-  /* 宽屏下把内容收进一个舒适列，避免被拉得太宽 */
-  .app-content { max-width: 720px; width: 100%; margin: 0 auto; }
+  /* 内容区背景铺满；卡片/气泡等内部元素可自行用 maxWidth 居中 */
+  .app-main { flex: 1; min-width: 0; }
+  .app-content { width: 100%; }
   .bottom-nav { display: none !important; }
 }
 

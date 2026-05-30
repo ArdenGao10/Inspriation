@@ -21,7 +21,7 @@ export function AppMe() {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '22px 22px 0' }}>
           <GAvatar size={78} ring glow initial="向" />
           <div style={{ fontFamily: G.serif, fontSize: 22, color: G.ink, marginTop: 16 }}>向野</div>
-          <div style={{ fontSize: 12.5, color: G.inkSoft, marginTop: 5, letterSpacing: 0.3 }}>vibe coder · 灵感 Lv.4</div>
+          <div style={{ fontSize: 12.5, color: G.inkSoft, marginTop: 5, letterSpacing: 0.3 }}>builder · 灵感 Lv.4</div>
           <div style={{ display: 'flex', alignItems: 'center', marginTop: 22 }}>
             {stats.map((s, i) => (
               <React.Fragment key={i}>
