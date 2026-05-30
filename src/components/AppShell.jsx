@@ -5,7 +5,7 @@ import { G } from '../theme.js';
 import { GIcon } from './glow.jsx';
 
 const APP_TABS = [
-  { k: 'home', label: '灵感', icon: 'home' },
+  { k: 'home', label: '灵感', icon: 'jar' },
   { k: 'agent', label: '对话', icon: 'spark' },
   { k: 'community', label: '社区', icon: 'comm' },
   { k: 'me', label: '我的', icon: 'user' },

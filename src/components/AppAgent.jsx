@@ -66,15 +66,13 @@ function renderInline(text) {
   ));
 }
 
-// 把 Agent 回复拆成「段落 / 列表 / 方向卡片」三类块。
-// - 行首匹配「方向X：xxx」→ 收进卡片组
+// 把 Agent 的 say 文字拆成「段落 / 列表」两类块（选项不在这里 —— 走结构化 options 字段）。
 // - 行首匹配「* / - / • / ·」→ 收进列表
 // - 其余非空行 → 拼成段落（空行分段）
 function parseAgentBlocks(text) {
   const lines = String(text || '').split('\n');
   const blocks = [];
   let curList = null;
-  let curCards = null;
   let curPara = [];
   const flushPara = () => {
     if (curPara.length) {
@@ -85,22 +83,15 @@ function parseAgentBlocks(text) {
   };
   for (const raw of lines) {
     const line = raw.replace(/\s+$/, '');
-    const dir = line.match(/^\s*方向\s*([A-Za-z0-9一二三四五六])\s*[：:、.\-]\s*(.+)$/);
-    if (dir) {
-      flushPara(); curList = null;
-      if (!curCards) { curCards = { type: 'cards', items: [] }; blocks.push(curCards); }
-      curCards.items.push({ key: dir[1], label: '方向' + dir[1], desc: dir[2].trim() });
-      continue;
-    }
     const li = line.match(/^\s*[*\-•·]\s+(.+)$/);
     if (li) {
-      flushPara(); curCards = null;
+      flushPara();
       if (!curList) { curList = { type: 'list', items: [] }; blocks.push(curList); }
       curList.items.push(li[1]);
       continue;
     }
-    if (!line.trim()) { flushPara(); curList = null; curCards = null; continue; }
-    curList = null; curCards = null;
+    if (!line.trim()) { flushPara(); curList = null; continue; }
+    curList = null;
     curPara.push(line);
   }
   flushPara();
@@ -198,7 +189,7 @@ const SYS_PROMPT = `你是「灵感 Agent」，一个有经验的产品搭子。
 - 拆 MVP：say 里列 3-5 步行动（每步单独一行，行首用「· 」），可再给 options「给技术栈」「画原型」「收藏进罐」。
 
 【输出格式 · 必须严格遵守】
-只输出一个 JSON 对象，不要任何额外文字、不要代码围栏、不要 markdown：
+只输出一个 json 对象（不要代码围栏、不要 markdown、不要多余文字）：
 {"say":"要对用户说的话","options":[{"label":"选项短标题(不超过12字)","desc":"一句话说明(不超过20字)"}]}
 - options 是给用户点击的选项，0-3 个；当前不需要让用户选择时给 []（空数组）。
 - say 里不要重复 options 的内容，也不要写「方向A」「1.」这种编号——选项由 options 字段单独给。`;
@@ -251,7 +242,8 @@ export function AppAgent() {
     writeMessages(nextAfterUser);
     setLoading(true);
     try {
-      const data = await Agent.complete(buildApiHistory(nextAfterUser), { model: Agent.CHAT_MODEL, temperature: 0.8, maxTokens: 600 });
+      // json:true → 强制 JSON 模式（智谱 response_format），根治快模型吐坏 JSON 的问题；token 给足避免截断
+      const data = await Agent.complete(buildApiHistory(nextAfterUser), { model: Agent.CHAT_MODEL, json: true, temperature: 0.7, maxTokens: 1200 });
       const content = (data.choices?.[0]?.message?.content || '').trim();
       writeMessages([...Store.get().chat, parseAgentReply(content)]);
     } catch (err) {

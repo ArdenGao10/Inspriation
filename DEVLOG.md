@@ -295,3 +295,28 @@
 - 这是「结构化对话 + 可点选项」，但仍是单轮 chat completion，**还不是真正的多步 tool-loop**（模型自主调 `search_cases` / `add_fragment` 等）—— 那是 **T5**。
 - 「找类似产品」目前只是模型凭记忆说，没接联网搜索（`web_search` 工具）—— 也在 T5。
 - 读真实业务数据库来生成更好灵感 —— 是 **T6**（Supabase + 鉴权 + 后端 Key 代理）。
+
+---
+
+## 步骤 15 · 底部导航图标按参考图换新
+
+- 参考用户给的导航栏图：灵感 = 罐子、对话 = 星星（保持不变）、社区 = 双人、我的 = 单人。
+- `glow.jsx` 的 `GIcon`：新增 `jar`（广口瓶带盖 + 一条液面弧线，呼应「灵感罐」）；`comm` 从原来偏挤的三人组改成更干净的并排双人；`user`（单人）/`spark`（星星）保持。
+- `AppShell.jsx`：灵感 Tab 图标 `home` → `jar`（侧边栏 + 底部栏共用 `APP_TABS`，桌面 / 移动端一起生效）。
+- 配色沿用现有体系：选中态暖黄 `gold`、未选中暖灰 `inkFaint`（按用户要求统一暖黄，不取参考图的橘色）。
+
+## 步骤 16 · 对话强制 JSON 模式，根治「还是纯文字」
+
+> 用户反馈：可点选项一直没真正生效，还是纯文字。实测定位到根因——**不是代码没改，是快模型吐坏 JSON**。
+
+### 实测诊断
+- 直接调 glm-4-flash（不开 JSON 模式）跑 3 轮：轮1 把 JSON 写成中文引号 `”，“` → 非法；轮2/3 啰嗦超长被 `max_tokens=600` 截断 → JSON 不完整。三轮全部解析失败 → 全程走纯文字兜底（还是带花括号的难看原文）。这就是「纯文字」的真相。
+- 改用 `response_format:{type:'json_object'}`（强制 JSON 模式）+ `max_tokens:1200` 重测：glm-4-flash 三轮全部合法、options 齐全（3/3/5）、稳定 6–7s；glm-4.5-air 也行但偶发一轮 26s。→ 选 flash + JSON 模式。
+
+### 改动
+- `AppAgent.jsx` 对话调用加 `json:true`（→ 智谱 `response_format`）、`maxTokens:1200`、`temperature:0.7`；`SYS_PROMPT` 含小写 `json` 字样（JSON 模式的要求）。
+- 删掉 `parseAgentBlocks` 里脆弱的「方向X：」正则识别 —— 选项彻底由结构化 `options` 字段驱动，文字只渲染段落 / 列表，不再丢内容。
+- ⚠️ **注意**：对话历史持久化在 localStorage，旧的纯文字对话不会自动变成选项卡；点头部「新对话」或从首页重新「让 Agent 展开它」开一段新对话才能看到选项卡。
+
+### 验证
+- `npm run build` 通过；真实多轮调用确认 flash + JSON 模式稳定返回 `{say, options}`、选项卡必现。
