@@ -735,6 +735,8 @@ function toolCallLabel(name, input) {
       return '🎲 <span class="tool-name">摇骰子</span>…';
     case 'analyze_fragments':
       return '🔍 <span class="tool-name">分析碎片库</span>…';
+    case 'search_cases':
+      return '🌐 <span class="tool-name">搜索案例</span>：' + escape(input.query || '');
     case 'present_idea':
       return '✨ <span class="tool-name">生成 idea</span>';
     default:
@@ -792,6 +794,9 @@ function renderIdeaCard(idea, msg) {
     renderChat();
   };
   actions.appendChild(saveBtn);
+  const searchBtn = el('button', { text: '🌐 查相似案例' });
+  searchBtn.onclick = () => runAgent('帮我查一下"' + (idea.title || '这个 idea') + '"有没有类似的案例');
+  actions.appendChild(searchBtn);
   const reRoll = el('button', { text: '🎲 再摇一次' });
   reRoll.onclick = () => rollDice();
   actions.appendChild(reRoll);
@@ -921,6 +926,23 @@ const TOOLS = [
       description: '当用户想了解自己碎片库的特征、主题、共同点时调用，例如"看看我攒的碎片"、"我的碎片有什么共同点"、"帮我整理一下"。返回当前所有碎片，由你用文字回复分析结果。',
       parameters: { type: 'object', properties: {} }
     }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'search_cases',
+      description: '搜索互联网上的相关产品/案例/参考资料。用于：(1) 用户说"查一下/搜一下 XX 案例"、"有没有类似产品"、"找些参考"；(2) 刚 present_idea 之后用户想确认有没有人做过；(3) 用户想了解某个领域的现状。query 要简洁有效，中文为主。',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: {
+            type: 'string',
+            description: '搜索关键词。从用户问题或刚生成的 idea 中提炼，5-15 字最佳。'
+          }
+        },
+        required: ['query']
+      }
+    }
   }
 ];
 
@@ -989,6 +1011,40 @@ ${picked.map((f, i) => `${i + 1}. 「${f.text}」`).join('\n')}
         + state.fragments.map((f, i) => `${i + 1}. ${f.text}`).join('\n')
         + '\n\n请用 3-5 句话分析这些碎片的主题、共同点、隐藏的兴趣方向，给用户一个有启发的观察。';
     }
+    case 'search_cases': {
+      const query = (input.query || '').trim();
+      if (!query) return '失败：搜索关键词为空。';
+      try {
+        const res = await fetch(API_BASE + '/web_search', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + state.apiKey
+          },
+          body: JSON.stringify({
+            search_engine: 'search-std',
+            search_query: query,
+            count: 5
+          })
+        });
+        if (!res.ok) {
+          const txt = await res.text();
+          return '搜索失败 ' + res.status + '：' + txt.slice(0, 200);
+        }
+        const data = await res.json();
+        const results = data.search_result || data.results || [];
+        if (results.length === 0) return '没搜到相关结果。可以告诉用户：暂时没找到对应案例，但这反而说明这个 idea 有空间。';
+        const formatted = results.slice(0, 5).map((r, i) => {
+          const title = r.title || r.name || '(无标题)';
+          const snippet = (r.content || r.snippet || r.description || '').slice(0, 200).replace(/\s+/g, ' ');
+          const link = r.link || r.url || '';
+          return `${i + 1}. ${title}\n   ${snippet}\n   ${link}`;
+        }).join('\n\n');
+        return `「${query}」的搜索结果：\n\n${formatted}\n\n请基于这些结果用 3-5 句话给用户介绍 1-3 个最相关的案例，说明跟用户场景的相似/不同处，把链接也带上。如果没有特别相关的，就坦白说"没找到太对口的"。`;
+      } catch (err) {
+        return '搜索失败：' + err.message;
+      }
+    }
     default:
       return '未知工具：' + name;
   }
@@ -1003,6 +1059,7 @@ function buildSystemPrompt() {
 - 用户分享想法/观察/感受/引用 → 用 add_fragment 工具存入碎片库
 - 用户说"摇骰子/来一个/碰一下/给我灵感" → 先调用 roll_dice，拿到结果后立即调用 present_idea
 - 用户想了解自己碎片库 → 用 analyze_fragments，然后用文字给出洞察
+- 用户想查/搜相似产品或案例 → 用 search_cases，然后用文字介绍最相关的 1-3 个
 - 用户单纯闲聊、问问题、表达情绪 → 直接用文字回复，不要乱调用工具
 
 风格：温暖、轻松、像创意搭子，回复要短（1-2 句）。一律中文。
