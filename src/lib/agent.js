@@ -31,24 +31,32 @@ export function getKey() {
   return import.meta.env.VITE_ZHIPU_KEY || Store.get().apiKey || '';
 }
 
-// 确保有 Key：没有则弹窗，返回 false
+// 确保可用：有前端 key（本地 .env / 用户自填）直连；没有则走服务端 /api/chat 代理（线上）。两种都放行。
 export function ensureKey() {
-  if (getKey()) return true;
-  Store.set({ needKey: true });
-  return false;
+  return true;
 }
 
 async function complete(messages, { json = false, tools, temperature = 0.85, maxTokens = 1200, model = MODEL } = {}) {
-  const key = getKey();
-  if (!key) throw new Error('NO_KEY');
   const payload = { model, temperature, max_tokens: maxTokens, messages };
   if (json) payload.response_format = { type: 'json_object' };
   if (tools) { payload.tools = tools; payload.tool_choice = 'auto'; }
-  const res = await fetch(API_BASE + '/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
-    body: JSON.stringify(payload),
-  });
+  const key = getKey();
+  let res;
+  if (key) {
+    // 有前端 key（本地开发 .env / 用户在设置里填的）→ 直连智谱
+    res = await fetch(API_BASE + '/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+      body: JSON.stringify(payload),
+    });
+  } else {
+    // 无前端 key → 走服务端代理 /api/chat（线上 Vercel，key 藏在服务端 ZHIPU_KEY，不进 bundle）
+    res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  }
   if (!res.ok) {
     const txt = await res.text();
     if (res.status === 401) throw new Error('API Key 无效或已过期，请在「我的 → 通用设置」重新填写');

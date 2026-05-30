@@ -410,6 +410,23 @@
 - `store.js` 新增 `prefs`（持久化）+ `togglePref`。
 - `npm run build` 通过。至此 T3 / T4 前端交互完成，下一步可接数据库（T6，需用户配 Supabase）。
 
+## 步骤 24 · Vercel Serverless 代理藏 key（准备上线）
+
+> 上线前最大的坑：`VITE_ZHIPU_KEY` 会被打进前端 bundle，部署到公开 URL 等于把智谱 key 白送。用 Vercel 自带的 serverless 函数代理解决，不必等 Supabase。
+
+- 新增 `api/chat.js`（Vercel serverless function）：把 key 藏在服务端环境变量 `ZHIPU_KEY`（无 `VITE_` 前缀 → 不进 bundle），透传请求体给智谱。
+- `agent.js` 的 `complete()`：**有前端 key**（本地 `.env` / 用户在设置里填的）→ 直连智谱；**无前端 key**（线上）→ 改调 `/api/chat` 代理。
+- `ensureKey()` 放行（不再强制弹窗）——有 key 直连、没 key 走代理都能用。
+- 本地开发不变：`.env` 的 `VITE_ZHIPU_KEY` 直连（vite dev 不跑 serverless）。
+- `.env.example` 补充 Vercel 部署说明（前端别配 key，服务端配 `ZHIPU_KEY`）。
+- 协作澄清：GitHub repo 归属与 Supabase / Vercel 无关 —— 谁都能用自己账号建 Supabase 项目 / import repo 到 Vercel，一人建后邀请队友共用。
+
+### Vercel 部署步骤（给团队）
+1. 在 vercel.com 用 GitHub 登录 → New Project → import 这个 repo（Vite 框架零配置，自动 build 出 dist + 把 `api/` 识别成 serverless 函数）。
+2. 项目 Settings → Environment Variables 加 `ZHIPU_KEY=<智谱key>`（**不要**加 `VITE_ZHIPU_KEY`）。
+3. Deploy。之后每次 push 自动重新部署。
+- `npm run build` 通过。
+
 ---
 
 > ⚠️ 协作约定（2026-05-31 起）：功能未经用户亲自确认前**不要 push**，只在本地改 + 写 DEVLOG；等用户说「可以下一步」再一次性 push。
