@@ -21,35 +21,140 @@ function GlowDot({ size = 24 }) {
 
 function UserBubble({ children }) {
   return (
-    <div style={{ alignSelf: 'flex-end', maxWidth: '80%', padding: '11px 15px', borderRadius: '16px 16px 5px 16px',
-      background: 'rgba(255,243,210,0.7)', border: '1px solid rgba(217,165,42,0.34)',
-      fontSize: 14.5, lineHeight: 1.55, color: G.ink, boxShadow: '0 2px 8px rgba(200,150,40,0.07)', whiteSpace: 'pre-wrap' }}>
+    <div style={{ alignSelf: 'flex-end', maxWidth: '80%', padding: '14px 18px', borderRadius: '16px 4px 16px 16px',
+      background: 'rgba(212,148,58,0.08)',
+      fontSize: 14.5, lineHeight: 1.55, color: G.ink, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
       {children}
     </div>
   );
 }
 
-function AgentBubble({ children, maxW = '84%' }) {
+function AgentBubble({ children, maxW = '80%' }) {
   return (
-    <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', maxWidth: maxW }}>
-      <div style={{ marginTop: 2 }}><GlowDot size={24} /></div>
-      <div style={{ flex: 1, padding: '12px 15px', borderRadius: '16px 16px 16px 5px', background: '#FFFFFF',
-        border: `1px solid ${G.hair}`, fontSize: 14.5, lineHeight: 1.6, color: G.ink, boxShadow: '0 3px 12px rgba(120,90,30,0.06)',
-        whiteSpace: 'pre-wrap' }}>
+    <div style={{ alignSelf: 'flex-start', display: 'flex', gap: 10, alignItems: 'flex-start', maxWidth: maxW }}>
+      <div style={{ marginTop: 6 }}><GlowDot size={24} /></div>
+      <div style={{ flex: 1, padding: '16px 20px', borderRadius: '4px 16px 16px 16px', background: '#FFFCF7',
+        border: '1px solid #E8DFD0', fontSize: 14.5, lineHeight: 1.6, color: G.ink,
+        boxShadow: '0 2px 10px rgba(120,90,30,0.04)', wordBreak: 'break-word' }}>
         {children}
       </div>
     </div>
   );
 }
 
+// 三个金色圆点跳动 —— Agent 正在思考时显示
 function TypingDots() {
   return (
-    <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
+    <span style={{ display: 'inline-flex', gap: 5, alignItems: 'center', padding: '4px 2px' }}>
       {[0, 1, 2].map((i) => (
-        <span key={i} style={{ width: 6, height: 6, borderRadius: 6, background: G.gold,
-          animation: `f2Twinkle 1.1s ease-in-out ${i * 0.18}s infinite` }} />
+        <span key={i} style={{ width: 7, height: 7, borderRadius: 7, background: G.gold,
+          animation: `typingDot 1.1s ease-in-out ${i * 0.16}s infinite` }} />
       ))}
     </span>
+  );
+}
+
+// —— 富文本渲染：**加粗**、列表、方向卡片 ——
+// 行内：把 **xxx** 渲染成 <strong>，其余原样保留。
+function renderInline(text) {
+  if (!text || !text.includes('**')) return text;
+  const parts = text.split(/(\*\*[^*\n]+\*\*)/g);
+  return parts.map((p, i) => (
+    p.startsWith('**') && p.endsWith('**') && p.length > 4
+      ? <strong key={i}>{p.slice(2, -2)}</strong>
+      : <React.Fragment key={i}>{p}</React.Fragment>
+  ));
+}
+
+// 把 Agent 回复拆成「段落 / 列表 / 方向卡片」三类块。
+// - 行首匹配「方向X：xxx」→ 收进卡片组
+// - 行首匹配「* / - / • / ·」→ 收进列表
+// - 其余非空行 → 拼成段落（空行分段）
+function parseAgentBlocks(text) {
+  const lines = String(text || '').split('\n');
+  const blocks = [];
+  let curList = null;
+  let curCards = null;
+  let curPara = [];
+  const flushPara = () => {
+    if (curPara.length) {
+      const t = curPara.join('\n').trim();
+      if (t) blocks.push({ type: 'para', text: t });
+      curPara = [];
+    }
+  };
+  for (const raw of lines) {
+    const line = raw.replace(/\s+$/, '');
+    const dir = line.match(/^\s*方向\s*([A-Za-z0-9一二三四五六])\s*[：:、.\-]\s*(.+)$/);
+    if (dir) {
+      flushPara(); curList = null;
+      if (!curCards) { curCards = { type: 'cards', items: [] }; blocks.push(curCards); }
+      curCards.items.push({ key: dir[1], label: '方向' + dir[1], desc: dir[2].trim() });
+      continue;
+    }
+    const li = line.match(/^\s*[*\-•·]\s+(.+)$/);
+    if (li) {
+      flushPara(); curCards = null;
+      if (!curList) { curList = { type: 'list', items: [] }; blocks.push(curList); }
+      curList.items.push(li[1]);
+      continue;
+    }
+    if (!line.trim()) { flushPara(); curList = null; curCards = null; continue; }
+    curList = null; curCards = null;
+    curPara.push(line);
+  }
+  flushPara();
+  return blocks;
+}
+
+function DirectionCards({ items, picked, onPick }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+      {items.map((c, j) => {
+        const on = picked === c.label;
+        const dim = picked && !on;
+        return (
+          <div key={j} className="gdir-card"
+            onClick={() => { if (!picked) onPick && onPick(c); }}
+            style={{
+              background: '#fff', borderRadius: 12, padding: 14,
+              border: `${on ? 2 : 1}px solid ${G.gold}`,
+              cursor: picked ? 'default' : 'pointer',
+              opacity: dim ? 0.55 : 1,
+              transition: 'background .15s ease, opacity .25s ease, border-width .15s ease',
+            }}>
+            <div style={{ fontSize: 13.5, fontWeight: 600, color: G.ink, marginBottom: 4 }}>{c.label}</div>
+            <div style={{ fontSize: 13, color: G.inkSoft, lineHeight: 1.55 }}>{c.desc}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function AgentContent({ text, picked, onPick }) {
+  const blocks = React.useMemo(() => parseAgentBlocks(text), [text]);
+  return (
+    <>
+      {blocks.map((b, i) => {
+        if (b.type === 'para') {
+          return <div key={i} style={{ marginTop: i ? 8 : 0, whiteSpace: 'pre-wrap' }}>{renderInline(b.text)}</div>;
+        }
+        if (b.type === 'list') {
+          return (
+            <ul key={i} style={{ margin: '6px 0 0', paddingLeft: 22, listStyle: 'disc' }}>
+              {b.items.map((it, j) => (
+                <li key={j} style={{ marginBottom: 4, lineHeight: 1.55 }}>{renderInline(it)}</li>
+              ))}
+            </ul>
+          );
+        }
+        if (b.type === 'cards') {
+          return <DirectionCards key={i} items={b.items} picked={picked} onPick={onPick} />;
+        }
+        return null;
+      })}
+    </>
   );
 }
 
@@ -183,13 +288,16 @@ export function AppAgent() {
         <div style={{ fontSize: 11.5, color: G.inkFaint, marginTop: 3, letterSpacing: 0.4 }}>把一句话,聊成一个方案</div>
       </div>
       <div ref={scrollerRef} className="glow-scroll" style={{ position: 'relative', zIndex: 2, flex: 1, minHeight: 0, overflowY: 'auto',
-        padding: '4px 20px 12px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+        padding: '4px 20px 12px', display: 'flex', flexDirection: 'column', gap: 16 }}>
         {hasConversation ? (
           <>
             {messages.map((m, i) => (
               m.role === 'user'
                 ? <UserBubble key={i}>{m.text}</UserBubble>
-                : <AgentBubble key={i}>{m.text}</AgentBubble>
+                : <AgentBubble key={i}>
+                    <AgentContent text={m.text} picked={m.picked}
+                      onPick={(c) => setMessages((prev) => prev.map((mm, ii) => ii === i ? { ...mm, picked: c.label } : mm))} />
+                  </AgentBubble>
             ))}
             {loading && <AgentBubble><TypingDots /></AgentBubble>}
           </>

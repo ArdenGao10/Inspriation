@@ -131,6 +131,36 @@
 - `npm run build` 通过（42 模块）。
 - 实测从首页摇 → 让 Agent 展开它 → 对话页只追加一条用户气泡 + 一次智谱调用。
 
+## 步骤 10 · 对话页 UI 打磨
+
+之前 Agent 回复一坨纯文本墙，加粗 / 列表 / 方向选择都没渲染。这一步给气泡换皮 + 加富文本渲染。
+
+### 气泡样式重做（`AppAgent.jsx`）
+- **AgentBubble**：白底 `#FFFCF7`、`1px solid #E8DFD0` 边框、`border-radius: 4px 16px 16px 16px`（左上角 4px 贴近头像）、`padding: 16px 20px`、`max-width: 80%`、`align-self: flex-start`。
+- **UserBubble**：浅金底 `rgba(212,148,58,0.08)`、`border-radius: 16px 4px 16px 16px`（右上角 4px）、`padding: 14px 18px`、右对齐。
+- 消息之间间距从 18px 收到 16px。
+
+### 富文本渲染
+- 新增 `renderInline(text)`：把 `**xxx**` 渲染成 `<strong>`，其余按原文。
+- 新增 `parseAgentBlocks(text)`：扫描每一行，区分三类块：
+  - **段落** —— 空行分段，连续非空行拼成一段
+  - **列表** —— 行首 `* / - / • / ·`，拼成 `<ul>`
+  - **方向卡片** —— 行首 `方向X：xxx`（支持 A-Z / 0-9 / 一-六），收进 `cards` 块
+- 新增 `<AgentContent>` 组件按 blocks 渲染：段落用 `<div>`、列表用带缩进的 `<ul>`、方向块用 `<DirectionCards>`。
+
+### 方向卡片
+- 每张：白底、`1px solid #D9A52A` 金边、圆角 12px、padding 14px、hover 背景 `rgba(212,148,58,0.05)`（CSS 类 `.gdir-card:hover`）。
+- 点击 → 把 `m.picked` 写到当前 Agent 消息上，命中的卡片边框加粗到 2px、其余淡化到 0.55 透明度。
+- 当前 Step 只有视觉高亮逻辑，「自动发送给 Agent」的联动留到 Step 3 接上对话历史时一起做。
+
+### 打字动画
+- `index.css` 新增 `@keyframes typingDot`：`translateY(0 → -5px → 0)` + `opacity (.35 → 1 → .35)`，1.1s 一轮。
+- `TypingDots` 三个 7×7 金色圆点，依次延迟 0 / 0.16s / 0.32s，循环跳动。
+
+### 验证
+- `npm run build` 通过（42 模块、CSS 3.56 KB、JS 195 KB）。
+- 设计稿静态样本 `<StaticDemo>` 没改，沿用旧的内嵌选项卡 UI；只有真实对话的气泡走新的 `<AgentContent>` 管线。
+
 ---
 
 ## 待办（后续步骤）
