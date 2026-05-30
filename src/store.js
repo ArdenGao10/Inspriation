@@ -36,6 +36,7 @@ let state = {
   saved: load('saved', []),
   chat: load('chat', []),         // 对话页消息历史 [{role:'user'|'agent', text, picked?}]，持久化 → 刷新不丢
   posts: load('posts', SEED_POSTS), // 社区帖子，持久化
+  prefs: load('prefs', []),       // 灵感口味偏好标签，持久化
   needKey: false,                 // 控制 API Key 弹窗
   showUpload: false,              // 控制素材上传弹窗
   pendingIdea: null,              // 从首页「让 Agent 展开它」带过去的灵感；对话页消费后清空
@@ -43,7 +44,7 @@ let state = {
 
 const subs = new Set();
 const emit = () => subs.forEach((fn) => fn());
-const PERSIST = { apiKey: 1, fragments: 1, saved: 1, chat: 1, posts: 1 };
+const PERSIST = { apiKey: 1, fragments: 1, saved: 1, chat: 1, posts: 1, prefs: 1 };
 
 function set(patch) {
   state = { ...state, ...patch };
@@ -69,6 +70,10 @@ export const Store = {
   },
   toggleLike(id) {
     set({ posts: state.posts.map((p) => p.id === id ? { ...p, liked: !p.liked, likes: p.likes + (p.liked ? -1 : 1) } : p) });
+  },
+  togglePref(tag) {
+    const has = state.prefs.includes(tag);
+    set({ prefs: has ? state.prefs.filter((t) => t !== tag) : [...state.prefs, tag] });
   },
   // 批量加入素材，返回实际新增条数（用于"输入多少加多少计数"）
   addFragments(list) {

@@ -114,15 +114,63 @@ function Toast({ msg }) {
   );
 }
 
+// 灵感口味偏好可选标签
+const TASTE_TAGS = ['效率工具', 'AI 应用', '社交社区', '内容创作', '生活方式', '开发者工具', '教育学习', '健康陪伴'];
+
+// 我发起 / 做过的项目 = 在社区发过的帖子
+function ProjectsList({ items }) {
+  if (!items || items.length === 0) {
+    return (
+      <div style={{ padding: '14px 4px 18px', fontSize: 12.5, color: G.inkFaint, textAlign: 'center', lineHeight: 1.7 }}>
+        还没发起项目，去社区发一条「晒成品 / 接力灵感」吧 ✨
+      </div>
+    );
+  }
+  return (
+    <div style={{ padding: '4px 0 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {items.map((p) => (
+        <div key={p.id} style={{ padding: '12px 14px', background: G.bgWarm, border: `1px solid ${G.hair2}`, borderRadius: 12 }}>
+          <div style={{ fontSize: 11, color: G.gold, letterSpacing: 0.3, marginBottom: 4 }}>{p.kind}</div>
+          <div style={{ fontSize: 14, color: G.ink, lineHeight: 1.45 }}>{p.title}</div>
+          <div style={{ fontSize: 11, color: G.inkFaint, marginTop: 6 }}>♥ {p.likes} · 评论 {p.comments}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// 灵感口味偏好：多选标签，写回 store.prefs
+function TastePanel({ prefs, onToggle }) {
+  return (
+    <div style={{ padding: '8px 4px 16px' }}>
+      <div style={{ fontSize: 11.5, color: G.inkSoft, marginBottom: 10, lineHeight: 1.6 }}>选几个你感兴趣的方向，Agent 会更懂你的口味</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9 }}>
+        {TASTE_TAGS.map((tag) => {
+          const on = prefs.includes(tag);
+          return (
+            <span key={tag} className="gpress" onClick={() => onToggle(tag)} style={{ padding: '7px 14px', borderRadius: 999, cursor: 'pointer',
+              fontSize: 12.5, border: `1px solid ${on ? G.gold : G.hair}`, color: on ? G.gold : G.inkSoft,
+              background: on ? 'rgba(212,148,58,0.08)' : 'transparent', fontWeight: on ? 600 : 400 }}>{tag}</span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function AppMe() {
   const savedCount = useStore((s) => s.saved.length);
   const fragCount = useStore((s) => s.fragments.length);
   const saved = useStore((s) => s.saved);
   const fragments = useStore((s) => s.fragments);
   const apiKey = useStore((s) => s.apiKey);
+  const posts = useStore((s) => s.posts);
+  const prefs = useStore((s) => s.prefs);
 
   const [openSaved, setOpenSaved] = React.useState(false);
   const [openFragments, setOpenFragments] = React.useState(false);
+  const [openProjects, setOpenProjects] = React.useState(false);
+  const [openTaste, setOpenTaste] = React.useState(false);
   const [openSettings, setOpenSettings] = React.useState(false);
   const [toastMsg, setToastMsg] = React.useState('');
   const toastTimer = React.useRef(null);
@@ -134,7 +182,17 @@ export function AppMe() {
   };
   React.useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
 
-  const stats = [{ n: String(savedCount), l: '收藏' }, { n: '6', l: '项目' }, { n: '23', l: '连续' }];
+  // 我发起的项目 = 在社区发过的帖子；灵感能量 / 等级由真实数据驱动
+  const myPosts = posts.filter((p) => p.name === '我');
+  const energy = savedCount + myPosts.length;
+  const level = Math.floor(energy / 5) + 1;
+  const toNext = 5 - (energy % 5);
+  const progressPct = ((energy % 5) / 5) * 100;
+  const stats = [
+    { n: String(savedCount), l: '收藏' },
+    { n: String(fragCount), l: '素材' },
+    { n: String(myPosts.length), l: '发布' },
+  ];
 
   const rows = [
     {
@@ -148,14 +206,18 @@ export function AppMe() {
     {
       k: 'projects',
       t: '我发起 / 做过的项目',
-      n: '6',
-      onClick: () => showToast('功能开发中，敬请期待 ✨'),
+      n: String(myPosts.length),
+      open: openProjects,
+      onClick: () => setOpenProjects((v) => !v),
+      expand: openProjects && <ProjectsList items={myPosts} />,
     },
     {
       k: 'taste',
       t: '灵感口味偏好',
-      n: '',
-      onClick: () => showToast('功能开发中，敬请期待 ✨'),
+      n: prefs.length ? String(prefs.length) : '',
+      open: openTaste,
+      onClick: () => setOpenTaste((v) => !v),
+      expand: openTaste && <TastePanel prefs={prefs} onToggle={Store.togglePref} />,
     },
     {
       k: 'settings',
@@ -174,7 +236,7 @@ export function AppMe() {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '22px 22px 0' }}>
           <GAvatar size={78} ring glow initial="向" />
           <div style={{ fontFamily: G.serif, fontSize: 22, color: G.ink, marginTop: 16 }}>向野</div>
-          <div style={{ fontSize: 12.5, color: G.inkSoft, marginTop: 5, letterSpacing: 0.3 }}>builder · 灵感 Lv.4</div>
+          <div style={{ fontSize: 12.5, color: G.inkSoft, marginTop: 5, letterSpacing: 0.3 }}>builder · 灵感 Lv.{level}</div>
           <div style={{ display: 'flex', alignItems: 'center', marginTop: 22 }}>
             {stats.map((s, i) => (
               <React.Fragment key={i}>
@@ -220,10 +282,10 @@ export function AppMe() {
 
         <div style={{ margin: '18px 22px 6px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: G.inkSoft, marginBottom: 9 }}>
-            <span>灵感能量</span><span style={{ color: G.gold }}>再 3 个灵感升 Lv.5</span>
+            <span>灵感能量</span><span style={{ color: G.gold }}>再 {toNext} 个灵感升 Lv.{level + 1}</span>
           </div>
           <div style={{ height: 5, borderRadius: 999, background: G.hair, overflow: 'hidden' }}>
-            <div style={{ width: '64%', height: '100%', borderRadius: 999, background: `linear-gradient(90deg, ${G.goldSoft}, ${G.gold})`, boxShadow: '0 0 10px rgba(217,165,42,0.5)' }} />
+            <div style={{ width: `${progressPct}%`, height: '100%', borderRadius: 999, background: `linear-gradient(90deg, ${G.goldSoft}, ${G.gold})`, boxShadow: '0 0 10px rgba(217,165,42,0.5)', transition: 'width .4s ease' }} />
           </div>
         </div>
 
