@@ -13,6 +13,13 @@ export const SEED_FRAGMENTS = [
   '本地小店的菜单想拍照存档', '想给室友做个共享待办',
 ];
 
+// 社区种子帖子。kind: '晒成品' | '接力灵感'。首次写入 localStorage，之后以本地为准。
+export const SEED_POSTS = [
+  { id: 'seedp1', name: '林深', kind: '晒成品', title: '上周从灵感罐摇出来的「代码截图美化器」，开源了', media: true, likes: 248, liked: false, comments: 32, ts: Date.now() - 2 * 3600e3 },
+  { id: 'seedp2', name: '阿木', kind: '接力灵感', title: '想给独居老人做一句话方言天气播报，谁来接力？', media: false, likes: 156, liked: false, comments: 41, ts: Date.now() - 5 * 3600e3 },
+  { id: 'seedp3', name: 'Yuki', kind: '晒成品', title: '宠物喂食打卡墙，室友们都在用，附上 Demo', media: true, likes: 320, liked: false, comments: 18, ts: Date.now() - 24 * 3600e3 },
+];
+
 const NS = 'inspo:';
 const load = (k, d) => { try { const v = localStorage.getItem(NS + k); return v == null ? d : JSON.parse(v); } catch { return d; } };
 const save = (k, v) => { try { localStorage.setItem(NS + k, JSON.stringify(v)); } catch {} };
@@ -28,6 +35,7 @@ let state = {
   fragments: load('fragments', SEED_FRAGMENTS).map((t, i) => typeof t === 'string' ? { id: 'seed' + i, text: t } : t),
   saved: load('saved', []),
   chat: load('chat', []),         // 对话页消息历史 [{role:'user'|'agent', text, picked?}]，持久化 → 刷新不丢
+  posts: load('posts', SEED_POSTS), // 社区帖子，持久化
   needKey: false,                 // 控制 API Key 弹窗
   showUpload: false,              // 控制素材上传弹窗
   pendingIdea: null,              // 从首页「让 Agent 展开它」带过去的灵感；对话页消费后清空
@@ -35,7 +43,7 @@ let state = {
 
 const subs = new Set();
 const emit = () => subs.forEach((fn) => fn());
-const PERSIST = { apiKey: 1, fragments: 1, saved: 1, chat: 1 };
+const PERSIST = { apiKey: 1, fragments: 1, saved: 1, chat: 1, posts: 1 };
 
 function set(patch) {
   state = { ...state, ...patch };
@@ -53,6 +61,15 @@ export const Store = {
   setPendingIdea(idea) { set({ pendingIdea: idea || null }); },
   clearPendingIdea() { if (state.pendingIdea) set({ pendingIdea: null }); },
   setChat(messages) { set({ chat: messages || [] }); },
+  // 社区：发帖（新帖置顶）、点赞切换
+  addPost(post) {
+    const p = { id: 'p' + Date.now(), name: '我', kind: '晒成品', media: false, likes: 0, liked: false, comments: 0, ts: Date.now(), ...post };
+    set({ posts: [p, ...state.posts] });
+    return p;
+  },
+  toggleLike(id) {
+    set({ posts: state.posts.map((p) => p.id === id ? { ...p, liked: !p.liked, likes: p.likes + (p.liked ? -1 : 1) } : p) });
+  },
   // 批量加入素材，返回实际新增条数（用于"输入多少加多少计数"）
   addFragments(list) {
     const items = (list || []).map((t) => String(t).trim()).filter(Boolean)

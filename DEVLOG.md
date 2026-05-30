@@ -386,6 +386,19 @@
 - 不动比例 / 结构（瓶身是设计师调过的），只统一材质，低风险。
 - `npm run build` 通过。后续若仍觉奇怪可再调比例 / 构图。
 
+> 插曲：用户给了一张「木塞玻璃罐」参考图，让我用 CSS+SVG 噪声重画了一版软木塞版本（feTurbulence 木纹 + 透明玻璃瓶 + 底部萤火光晕）；用户看后决定不改了，`git checkout` 恢复到本步的玻璃精修版，继续后续进度。
+
+## 步骤 22 · 社区页接 store + 可交互（T3）
+
+> 把社区页从静态假数据改成读真实 store，并接上点赞 / 发帖 / 接力。
+
+- `store.js`：新增 `posts`（持久化）+ `SEED_POSTS` 种子（原静态 3 条转成种子）；`Store.addPost`（新帖置顶）、`Store.toggleLike`（点赞切换 + 数字±1）。
+- `AppCommunity.jsx` 重写：读 `useStore(posts)`；点赞按钮切换（liked 变金 + 数字变）；时间显示改「刚刚 / X分钟 / X小时 / X天前」。
+- 发帖：右下角 + → `ComposeModal`（标题 + 类型「晒成品 / 接力灵感」）→ `addPost` 置顶。
+- 接力：接力贴的「接力 →」→ `App.relayToAgent`：`setPendingIdea(帖子标题)` + 切到对话页，Agent 自动展开。复用首页那套 `pendingIdea` 跨页机制。
+- 「最新」tab 按 `ts` 倒序；推荐 / 关注暂用默认顺序（新帖置顶）。
+- `npm run build` 通过。
+
 ---
 
 > ⚠️ 协作约定（2026-05-31 起）：功能未经用户亲自确认前**不要 push**，只在本地改 + 写 DEVLOG；等用户说「可以下一步」再一次性 push。

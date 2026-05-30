@@ -9,6 +9,7 @@ import { AppCommunity } from './components/AppCommunity.jsx';
 import { AppMe } from './components/AppMe.jsx';
 import { KeyModal } from './components/KeyModal.jsx';
 import { UploadModal } from './components/UploadModal.jsx';
+import { Store } from './store.js';
 
 // 单个 Tab 容器：铺满内容区，非激活时 display:none（DOM 保留、state 不卸载）。
 function TabPane({ active, children }) {
@@ -21,12 +22,17 @@ function TabPane({ active, children }) {
 
 export default function App() {
   const [tab, setTab] = React.useState('home');
+  // 社区「接力」→ 把帖子的想法带到对话页让 Agent 展开
+  const relayToAgent = (post) => {
+    Store.setPendingIdea({ lead: '', accent: post.title, blurb: '' });
+    setTab('agent');
+  };
   return (
     <>
       <AppShell active={tab} onChange={setTab}>
         <TabPane active={tab === 'home'}><JarHome onExpand={() => setTab('agent')} /></TabPane>
         <TabPane active={tab === 'agent'}><AppAgent /></TabPane>
-        <TabPane active={tab === 'community'}><AppCommunity /></TabPane>
+        <TabPane active={tab === 'community'}><AppCommunity onRelay={relayToAgent} /></TabPane>
         <TabPane active={tab === 'me'}><AppMe /></TabPane>
       </AppShell>
       <KeyModal />
