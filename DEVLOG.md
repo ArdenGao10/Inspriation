@@ -67,6 +67,24 @@
   - 卡片 / 对话气泡仍可以用各自的 `maxWidth` 居中，但内容区背景全宽铺满。
 - `npm run build` 验证通过（42 模块，无新增报错）。
 
+## 步骤 7 · 我的页菜单点击 + 首页合成动画文案轮播
+
+### 我的页（`AppMe.jsx`）菜单交互
+- 「**收藏的灵感**」点击 → 行内展开 / 收起 store 中的真实收藏列表。每条卡片：`lead + accent` 衬线标题、`blurb` 描述、收藏时间、来源素材。空态显示「还没有收藏的灵感，去首页摇一摇吧 ✨」。右侧数字读 `store.saved.length`。
+- 「**通用设置**」点击 → 行内展开 / 收起设置面板，含「智谱 API Key」密码输入框，读 `store.apiKey`、保存写回 `store + localStorage`，保存后弹 toast。
+- 「**我发起 / 做过的项目**」「**灵感口味偏好**」点击 → toast「功能开发中，敬请期待 ✨」。
+- 「**我的灵感罐**」卡片点击行为改为展开 / 收起所有素材列表（之前是直接打开 UploadModal）。每条素材显示文字内容。展开头部留了一个「+ 添加」入口仍可触发 UploadModal，保留原有上传通道。右侧「`{fragCount}` 份素材」继续读真实 store。
+- 行右侧箭头加 `transform: rotate(90deg)` 过渡，展开 / 收起有方向反馈。
+- 顺手补了组件内置 `Toast`（`absolute` 定位在 me 页底部 80px，2.4 秒自动消失）。
+
+### 首页合成动画文案轮播（`JarHome.jsx` 的 `SynthSequence`）
+- 文案改成三句循环：「收集素材 ✦」「寻找隐藏的关联点 ✦」「正在合成新灵感 ✦」。
+- 每 2 秒切一次，淡出 260ms → 切换 → 淡入 260ms，CSS `opacity transition` 实现。
+- `setInterval` 持续轮播，组件随 `stage` 从 `'synth'` 切到 `'result'` 卸载时 `clearInterval` 自动停止 → 合成完成自然结束。
+- 不影响原 `phase`（`gather → think → condense`）粒子动画时序。
+
+`npm run build` 通过（42 模块）。
+
 ---
 
 ## 待办（后续步骤）
