@@ -161,6 +161,40 @@
 - `npm run build` 通过（42 模块、CSS 3.56 KB、JS 195 KB）。
 - 设计稿静态样本 `<StaticDemo>` 没改，沿用旧的内嵌选项卡 UI；只有真实对话的气泡走新的 `<AgentContent>` 管线。
 
+## 步骤 11 · Agent 从"给方案"改成"一起想"
+
+之前一次性倾倒整段方案，用户被动看；这一步改成引导式共创对话。
+
+### 新 system prompt（`AppAgent.jsx` 顶部常量 `SYS_PROMPT`）
+- 定位：「共创伙伴，不是方案生成器」。
+- 节奏约束：首轮 ≤ 150 字 / 展开轮 ≤ 200 字；每轮只推进一小步、给 2-3 个选择、等用户选完再继续。
+- 风格约束：口语化中文、像朋友聊天、不要 markdown、不要加粗。
+- **三阶段对话节奏写进 prompt**：首轮「一句话理解 + 2-3 个方向 + 问挑哪个」→ 用户选方向后「核心玩法 2-3 句 + 目标用户 1 句 + 问 MVP / 类似产品」→ 后续按用户选择推进（拆 MVP 给 3-5 步行动 / 搜类似产品给对比 / 别的就正常聊）。
+- **格式约定**：方向选项必须严格 `方向A：xxx` / `方向B：xxx` / `方向C：xxx` 各占一行，前端 `parseAgentBlocks` 就靠这个识别成可点击卡片。
+
+### 对话历史 + API 调用重做
+- 删掉旧的 `buildExpandPrompt`（一次性的"给方案"提示），改成 `buildInitialUserMessage(idea)` 只把 idea 拼成第一条用户消息。
+- 新增 `messagesRef`：同步镜像 messages 数组，`sendUser` / `handlePickDirection` 可以在 setState 之外读到最新值（异步链路里不用等下一帧）。
+- 新增 `buildApiHistory(msgs)`：每次都把 `[{role:'system', content:SYS_PROMPT}, ...messages 映射]` 完整传给智谱 —— Agent 有完整上下文，知道现在该走哪一阶段。
+- 新增 `sendUser(text)` 统一入口：追加用户气泡 → setLoading → `Agent.complete(history)` → 追加 agent 气泡 / 错误兜底 → 关 loading。`temperature: 0.85`、`max_tokens: 700`（够 200 字回复）。
+- 首页跨页流转改为 `sendUser(buildInitialUserMessage(idea))`，复用同一条管线，不再走单独的 promise 分支。
+
+### 方向卡片接上自动发送
+- `handlePickDirection(msgIndex, choice)`：先在当前 agent 消息上打 `picked = '方向A'` 标记（让那张卡视觉高亮、其余淡化），紧接着 `sendUser('我选方向A：{描述}')` 把选择作为用户消息发出去。
+- Agent 收到带"我选方向X：xxx"的历史 → 命中 prompt 的"用户选方向后"分支，进入第二轮展开。
+
+### 输入框可用了
+- 之前的 `<span>` 占位换成真 `<input value/onChange>`：
+  - 整个 pill 包成 `<form>`，回车提交 = 点发送按钮；
+  - placeholder：闲时 `继续聊聊你的想法…` / loading 时 `Agent 思考中…`；
+  - 发送按钮在 `draft 为空 || loading` 时 disabled + 透明度 0.45，避免空消息或并发请求。
+- `submitDraft()` 取 trim 后的 draft，清空 draft 再 `sendUser` —— UI 立刻清空，不等 API。
+
+### 验证
+- `npm run build` 通过（42 模块，JS 196 KB / gzip 63.6 KB，CSS 不变）。
+- 首页摇 → 让 Agent 展开它 → 对话页自动发首条 → Agent 回简短理解 + 3 个方向 → 点卡片自动发"我选方向X" → 进入第二轮展开。
+- 输入框打字 + 回车 / 点发送均可发消息；loading 时按钮禁用。
+
 ---
 
 ## 待办（后续步骤）

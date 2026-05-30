@@ -222,54 +222,100 @@ function StaticDemo() {
 
 const ideaTitle = (idea) => `${idea.lead ? idea.lead + ' ' : ''}${idea.accent || ''}`.trim() || '一个新灵感';
 
-function buildExpandPrompt(idea) {
-  return `用户通过灵感罐碰撞出了一个 idea:
-标题:${ideaTitle(idea)}
-描述:${idea.blurb || '(无补充描述)'}
-
-请帮用户展开这个想法:
-1. 用一句话确认你理解了核心价值
-2. 给出 2-3 个可以深入的方向让用户选择
-3. 等用户选择后再展开详细方案
-
-用友好的中文回复。`;
+// 把首页带过来的 idea 拼成第一条用户消息（同时是 UI 气泡 + API content）
+function buildInitialUserMessage(idea) {
+  const title = ideaTitle(idea);
+  const blurb = (idea.blurb || '').trim();
+  return blurb
+    ? `帮我展开这个灵感：${title}\n（${blurb}）`
+    : `帮我展开这个灵感：${title}`;
 }
+
+// 共创式对话的 system prompt。约定方向行格式 → 前端可解析成卡片。
+const SYS_PROMPT = `你是灵感 Agent，一个有经验的产品伙伴。用户从灵感罐里碰撞出了一个 idea，想和你一起一步步把它聊成可落地的方案。
+
+【核心原则】
+- 你是共创伙伴，不是方案生成器
+- 每次回复都简短：首轮不超过 150 字，展开轮不超过 200 字
+- 一轮只推进一小步，给用户 2-3 个选择，等用户选了再继续
+- 不要一次性给完整方案
+- 用口语化的中文，像朋友聊天；不要用 markdown 语法，不要加粗
+
+【对话节奏】
+- 首轮：用一句话表达你对这个 idea 的理解（带点趣味），然后给出 2-3 个可以深入的方向，最后一句问"挑哪个方向展开？"
+- 用户选方向后：用 2-3 句说清这个方向的核心玩法，再加 1 句说目标用户是谁，最后问"要我帮你拆解 MVP 吗？还是搜搜有没有类似产品？"
+- 后续：用户说"拆解 MVP"就列 3-5 步可执行的行动；说"搜类似产品"就给几个相关产品对比；问别的就正常简短聊。
+
+【格式约定 · 必须严格遵守】
+- 只在"首轮"给方向选项；展开轮、后续轮不要再用方向格式
+- 给方向选项时，每个方向必须单独占一行，行首严格用「方向A：」「方向B：」「方向C：」开头（中文冒号），后面接一句话描述
+- 前端会把这些行渲染成可点击的卡片，所以不要换别的写法、不要在前后加序号、不要加粗`;
 
 export function AppAgent() {
   const pendingIdea = useStore((s) => s.pendingIdea);
-  const [messages, setMessages] = React.useState([]); // { role: 'user'|'agent', text: string }
+  const [messages, setMessages] = React.useState([]); // { role: 'user'|'agent', text, picked? }
   const [loading, setLoading] = React.useState(false);
+  const [draft, setDraft] = React.useState('');
   const scrollerRef = React.useRef(null);
-  // 已处理过的 idea 引用 —— StrictMode 双触发兜底：两次 setup 闭包里捕获的是同一个对象，
-  // 第二次进来时 ref 命中直接 return，不会再发一次。
+  // messages 的同步镜像，sendUser 里可以在 setState 之外读到最新值
+  const messagesRef = React.useRef([]);
+  // 已处理过的 idea 引用 —— StrictMode 双触发兜底
   const handledIdeaRef = React.useRef(null);
 
-  // 监听 store.pendingIdea：来自首页的灵感 → 自动产生一轮对话。
+  const writeMessages = (next) => {
+    messagesRef.current = next;
+    setMessages(next);
+  };
+
+  // 把当前对话历史转成智谱 API 的 messages 数组（system + user/assistant 轮替）
+  const buildApiHistory = (msgs) => [
+    { role: 'system', content: SYS_PROMPT },
+    ...msgs.map((m) => ({ role: m.role === 'agent' ? 'assistant' : 'user', content: m.text })),
+  ];
+
+  // 发一条用户消息 → 追加用户气泡 → 带完整历史调智谱 → 追加 agent 气泡
+  const sendUser = async (text) => {
+    const t = (text || '').trim();
+    if (!t || loading) return;
+    if (!Agent.ensureKey()) return;
+    const nextAfterUser = [...messagesRef.current, { role: 'user', text: t }];
+    writeMessages(nextAfterUser);
+    setLoading(true);
+    try {
+      const data = await Agent.complete(buildApiHistory(nextAfterUser), { temperature: 0.85, maxTokens: 700 });
+      const reply = (data.choices?.[0]?.message?.content || '').trim() || '(没拿到回复)';
+      writeMessages([...messagesRef.current, { role: 'agent', text: reply }]);
+    } catch (err) {
+      const msg = err && err.message === 'NO_KEY' ? '请先连接智谱 API Key' : (err && err.message) || '展开失败';
+      writeMessages([...messagesRef.current, { role: 'agent', text: '抱歉，出错了：' + msg }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 方向卡片点击 → 给当前 agent 气泡打 picked 标记 + 自动发一条用户消息
+  const handlePickDirection = (msgIndex, choice) => {
+    const updated = messagesRef.current.map((mm, ii) => ii === msgIndex ? { ...mm, picked: choice.label } : mm);
+    writeMessages(updated);
+    sendUser(`我选${choice.label}：${choice.desc}`);
+  };
+
+  const submitDraft = () => {
+    const t = draft.trim();
+    if (!t || loading) return;
+    setDraft('');
+    sendUser(t);
+  };
+
+  // 监听 store.pendingIdea：来自首页的灵感 → 自动产生第一轮对话
   React.useEffect(() => {
     if (!pendingIdea) return;
     if (handledIdeaRef.current === pendingIdea) return; // 同一个 idea 不会被处理两次
-    // 没 Key 就让 KeyModal 接管，灵感原地保留（用户填完再切回来会自动跑）
     if (!Agent.ensureKey()) return;
-    // 先打标记、再清 store，最后才追加消息 / 调 API —— 顺序很关键，确保任何重入都被挡掉
     handledIdeaRef.current = pendingIdea;
     const idea = pendingIdea;
     Store.clearPendingIdea();
-    const userText = `帮我展开这个灵感:${ideaTitle(idea)}`;
-    setMessages((m) => [...m, { role: 'user', text: userText }]);
-    setLoading(true);
-    Agent.complete(
-      [{ role: 'user', content: buildExpandPrompt(idea) }],
-      { temperature: 0.8, maxTokens: 900 },
-    )
-      .then((data) => {
-        const text = (data.choices?.[0]?.message?.content || '').trim() || '(没拿到回复)';
-        setMessages((m) => [...m, { role: 'agent', text }]);
-      })
-      .catch((err) => {
-        const msg = err && err.message === 'NO_KEY' ? '请先连接智谱 API Key' : (err && err.message) || '展开失败';
-        setMessages((m) => [...m, { role: 'agent', text: '抱歉,展开这个灵感时出错了:' + msg }]);
-      })
-      .finally(() => setLoading(false));
+    sendUser(buildInitialUserMessage(idea));
   }, [pendingIdea]);
 
   // 新消息进来时滚到底
@@ -279,6 +325,7 @@ export function AppAgent() {
   }, [messages, loading]);
 
   const hasConversation = messages.length > 0 || loading;
+  const canSend = draft.trim().length > 0 && !loading;
 
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
@@ -296,7 +343,7 @@ export function AppAgent() {
                 ? <UserBubble key={i}>{m.text}</UserBubble>
                 : <AgentBubble key={i}>
                     <AgentContent text={m.text} picked={m.picked}
-                      onPick={(c) => setMessages((prev) => prev.map((mm, ii) => ii === i ? { ...mm, picked: c.label } : mm))} />
+                      onPick={(c) => handlePickDirection(i, c)} />
                   </AgentBubble>
             ))}
             {loading && <AgentBubble><TypingDots /></AgentBubble>}
@@ -307,14 +354,21 @@ export function AppAgent() {
       </div>
       <div style={{ position: 'relative', zIndex: 3, padding: '8px 20px 14px',
         background: 'linear-gradient(to top, rgba(253,251,244,0.97) 60%, rgba(253,251,244,0))' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 46, borderRadius: 999, padding: '0 8px 0 18px',
+        <form onSubmit={(e) => { e.preventDefault(); submitDraft(); }}
+          style={{ display: 'flex', alignItems: 'center', gap: 10, height: 46, borderRadius: 999, padding: '0 8px 0 18px',
           background: '#fff', border: `1px solid ${G.hair}`, boxShadow: '0 3px 14px rgba(120,90,30,0.06)' }}>
-          <span style={{ flex: 1, fontSize: 13.5, color: G.inkFaint }}>继续聊聊你的想法…</span>
-          <div className="gpress" style={{ width: 36, height: 36, borderRadius: '50%', display: 'grid', placeItems: 'center', cursor: 'pointer',
-            background: G.bg, boxShadow: `inset 0 0 0 1px rgba(217,165,42,0.4)` }}>
+          <input value={draft} onChange={(e) => setDraft(e.target.value)} disabled={loading}
+            placeholder={loading ? 'Agent 思考中…' : '继续聊聊你的想法…'}
+            style={{ flex: 1, height: 44, border: 'none', outline: 'none', background: 'transparent',
+              fontSize: 14, color: G.ink, fontFamily: 'inherit' }} />
+          <button type="submit" disabled={!canSend} className="gpress"
+            style={{ width: 36, height: 36, borderRadius: '50%', display: 'grid', placeItems: 'center',
+              cursor: canSend ? 'pointer' : 'default', background: G.bg, border: 'none',
+              boxShadow: 'inset 0 0 0 1px rgba(217,165,42,0.4)',
+              opacity: canSend ? 1 : 0.45, padding: 0 }}>
             <GIcon name="up" size={16} color={G.gold} sw={1.9} />
-          </div>
-        </div>
+          </button>
+        </form>
       </div>
     </div>
   );
