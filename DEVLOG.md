@@ -197,7 +197,7 @@
 
 ---
 
-## 步骤 9 · 对话页去样本化 + 方向卡可交互 + 头部光晕对齐
+## 步骤 12 · 对话页去样本化 + 方向卡可交互 + 头部光晕对齐
 
 > 目标：把对话页从"展示设计稿示例"变成真实产品对话框；方向选项从纯文本变成可点击卡片；修掉点击闪蓝、对齐头部光晕。
 
@@ -226,7 +226,7 @@
 
 ---
 
-## 步骤 10 · 首页合成光晕跟随文案循环
+## 步骤 13 · 首页合成光晕跟随文案循环
 
 > 目标：摇晃罐子进入合成态后，三句「收集素材中 / 寻找隐藏的关联点 / 正在合成新灵感」不再只是文字轮播；对应的光晕阶段也要同步循环。
 
@@ -242,8 +242,8 @@
 
 > 起因：用户反馈来回切 Tab 状态丢失（灵感页合成中途切走会重置、对话切走回到初始态）。根因在 `App.jsx` 用 if/else 只挂载当前 Tab，切换即卸载 → 组件本地 state 全丢。借此重排了整体路线图。
 
-- **T1 · 跨页状态保留**（进行中）：四个 Tab 全部常驻挂载，用 CSS `display` 切换可见性，保留各页本地 state、滚动位置、在途请求。
-- **T2 · 对话持久化到 store**：把 `AppAgent.messages` 提到 store + localStorage，刷新页面 / 关闭重开也不丢对话。
+- **T1 · 跨页状态保留**（✅ 已完成）：四个 Tab 全部常驻挂载，用 CSS `display` 切换可见性，保留各页本地 state、滚动位置、在途请求。
+- **T2 · 对话持久化到 store**（✅ 已完成）：把 `AppAgent.messages` 提到 store + localStorage，刷新页面 / 关闭重开也不丢对话。
 - **T3 · 社区接 store + 可交互**：feed 读真实数据（用户晒的成品 / 接力贴），点赞 / 评论数本地态，发帖 + 接力跨页流转打通。
 - **T4 · 「我的」页补全**：项目列表、灵感口味偏好做成真实可用（去掉 toast 占位 + 写死的 6/23 统计）。
 - **T5 · Agent 真实 tool-loop**：`propose_directions` / `expand_plan` / `search_cases` / `add_fragment` 多步工具循环。
@@ -254,3 +254,14 @@
 - `TabPane`：`position:absolute; inset:0`，铺满 `.app-content`；非激活时 `display:none`（DOM 保留、state 不卸载）。
 - 效果：灵感页合成中途切到对话页再切回，结果还在；对话聊到一半切走再回来，消息历史 + 滚动位置都在。
 - 取舍：隐藏的 Tab 仍挂载（GlowField 动画仍在跑），4 个轻量页可接受；后续若有性能问题再按需暂停隐藏页动画。
+
+### T2 实现记录
+- 起因：T1 只解决「同一次会话内切 Tab」不丢；刷新 / 关闭重开页面仍会丢对话（messages 是 `AppAgent` 的本地 state）。这一步把对话历史提到全局 store 并落 localStorage。
+- `store.js`：新增 `chat` 字段（默认 `load('chat', [])`），加入 `PERSIST` → 每次变更自动写 localStorage；新增 `Store.setChat(messages)`。
+- `AppAgent.jsx`：
+  - 删掉本地 `useState(messages)` 和它的镜像 `messagesRef`，改成 `const messages = useStore((s) => s.chat)`。
+  - `writeMessages(next)` 直接 = `Store.setChat(next)`；`sendUser` / `handlePickDirection` 里读最新值统一改用 `Store.get().chat`（store 是同步更新的，比镜像 ref 更可靠）。
+  - 开场白逻辑改写：去掉 `greetedRef`，改成「`pendingIdea` 为空且 `Store.get().chat.length === 0` 才插入 `GREETING`」—— 刷新后 store 已有历史就不会覆盖；StrictMode 双触发时第二次也会因 `length>0` 早返回。
+  - 新增「新对话」入口（头部右上角，仅 `messages.length > 1` 时显示）：`clearChat()` 把对话重置成只剩一条 `GREETING`，loading 中禁用。
+- 效果：对话聊到一半刷新页面 / 关掉浏览器重开，历史和方向卡选中态都还在；需要重来点「新对话」即可。
+- `npm run build` 通过（42 模块，JS 194.7 KB / gzip 63.0 KB）。

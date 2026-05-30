@@ -195,21 +195,21 @@ const SYS_PROMPT = `你是灵感 Agent，一个有经验的产品伙伴。用户
 - 给方向选项时，每个方向必须单独占一行，行首严格用「方向A：」「方向B：」「方向C：」开头（中文冒号），后面接一句话描述
 - 前端会把这些行渲染成可点击的卡片，所以不要换别的写法、不要在前后加序号、不要加粗`;
 
+// 无灵感进来时的开场白（也用于「新对话」重置）
+const GREETING = '你今天有什么想聊的灵感吗？可以聊一聊。';
+
 export function AppAgent() {
   const pendingIdea = useStore((s) => s.pendingIdea);
-  const [messages, setMessages] = React.useState([]); // { role: 'user'|'agent', text, picked? }
+  // 消息历史改存到全局 store（持久化到 localStorage）→ 切 Tab / 刷新页面都不丢
+  const messages = useStore((s) => s.chat);
   const [loading, setLoading] = React.useState(false);
   const [draft, setDraft] = React.useState('');
   const scrollerRef = React.useRef(null);
-  // messages 的同步镜像，sendUser 里可以在 setState 之外读到最新值
-  const messagesRef = React.useRef([]);
   // 已处理过的 idea 引用 —— StrictMode 双触发兜底
   const handledIdeaRef = React.useRef(null);
 
-  const writeMessages = (next) => {
-    messagesRef.current = next;
-    setMessages(next);
-  };
+  // 写消息：直接落到 store（同步更新 state + 写 localStorage）。读最新值用 Store.get().chat。
+  const writeMessages = (next) => Store.setChat(next);
 
   // 把当前对话历史转成智谱 API 的 messages 数组（system + user/assistant 轮替）
   const buildApiHistory = (msgs) => [
@@ -222,16 +222,16 @@ export function AppAgent() {
     const t = (text || '').trim();
     if (!t || loading) return;
     if (!Agent.ensureKey()) return;
-    const nextAfterUser = [...messagesRef.current, { role: 'user', text: t }];
+    const nextAfterUser = [...Store.get().chat, { role: 'user', text: t }];
     writeMessages(nextAfterUser);
     setLoading(true);
     try {
       const data = await Agent.complete(buildApiHistory(nextAfterUser), { temperature: 0.85, maxTokens: 700 });
       const reply = (data.choices?.[0]?.message?.content || '').trim() || '(没拿到回复)';
-      writeMessages([...messagesRef.current, { role: 'agent', text: reply }]);
+      writeMessages([...Store.get().chat, { role: 'agent', text: reply }]);
     } catch (err) {
       const msg = err && err.message === 'NO_KEY' ? '请先连接智谱 API Key' : (err && err.message) || '展开失败';
-      writeMessages([...messagesRef.current, { role: 'agent', text: '抱歉，出错了：' + msg }]);
+      writeMessages([...Store.get().chat, { role: 'agent', text: '抱歉，出错了：' + msg }]);
     } finally {
       setLoading(false);
     }
@@ -239,7 +239,7 @@ export function AppAgent() {
 
   // 方向卡片点击 → 给当前 agent 气泡打 picked 标记 + 自动发一条用户消息
   const handlePickDirection = (msgIndex, choice) => {
-    const updated = messagesRef.current.map((mm, ii) => ii === msgIndex ? { ...mm, picked: choice.label } : mm);
+    const updated = Store.get().chat.map((mm, ii) => ii === msgIndex ? { ...mm, picked: choice.label } : mm);
     writeMessages(updated);
     sendUser(`我选${choice.label}：${choice.desc}`);
   };
@@ -251,12 +251,19 @@ export function AppAgent() {
     sendUser(t);
   };
 
-  // 没有从首页带来灵感时，Agent 先抛一句开场白（真实产品，不再展示示例对话）
-  const greetedRef = React.useRef(false);
+  // 清空对话 → 重置成只有开场白的初始态
+  const clearChat = () => {
+    if (loading) return;
+    writeMessages([{ role: 'agent', text: GREETING }]);
+    setDraft('');
+  };
+
+  // 没有从首页带来灵感、且 store 里也没有历史时，Agent 先抛一句开场白。
+  // store.chat 已有内容（刷新恢复 / 已经聊过）时不再插入，避免覆盖历史。
   React.useEffect(() => {
-    if (greetedRef.current || pendingIdea) return;
-    greetedRef.current = true;
-    writeMessages([{ role: 'agent', text: '你今天有什么想聊的灵感吗？可以聊一聊。' }]);
+    if (pendingIdea) return;
+    if (Store.get().chat.length > 0) return;
+    writeMessages([{ role: 'agent', text: GREETING }]);
   }, [pendingIdea]);
 
   // 监听 store.pendingIdea：来自首页的灵感 → 自动产生第一轮对话
@@ -283,6 +290,11 @@ export function AppAgent() {
       {/* 头部：光晕收束在这一格内，正中对齐 Agent 那颗闪烁星星，避免光点飘到下方卡片旁边 */}
       <div style={{ position: 'relative', overflow: 'hidden', zIndex: 2, padding: '14px 22px 14px' }}>
         <GlowField x="50%" y="30%" r={170} intensity={0.5} motes={6} spread={0.7} />
+        {messages.length > 1 && (
+          <span className="gpress" onClick={clearChat} title="清空，开始新对话"
+            style={{ position: 'absolute', right: 16, top: 16, zIndex: 2, cursor: loading ? 'default' : 'pointer',
+              fontSize: 11.5, color: G.inkFaint, opacity: loading ? 0.4 : 1 }}>新对话</span>
+        )}
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
           <GlowDot size={30} />
           <div style={{ fontFamily: G.serif, fontSize: 18, color: G.ink, letterSpacing: 0.4 }}>灵感 Agent</div>

@@ -21,6 +21,7 @@ let state = {
   apiKey: load('apiKey', ''),     // 用户在弹窗里填的 Key（agent 会优先用 .env 的 VITE_ZHIPU_KEY）
   fragments: load('fragments', SEED_FRAGMENTS).map((t, i) => typeof t === 'string' ? { id: 'seed' + i, text: t } : t),
   saved: load('saved', []),
+  chat: load('chat', []),         // 对话页消息历史 [{role:'user'|'agent', text, picked?}]，持久化 → 刷新不丢
   needKey: false,                 // 控制 API Key 弹窗
   showUpload: false,              // 控制素材上传弹窗
   pendingIdea: null,              // 从首页「让 Agent 展开它」带过去的灵感；对话页消费后清空
@@ -28,7 +29,7 @@ let state = {
 
 const subs = new Set();
 const emit = () => subs.forEach((fn) => fn());
-const PERSIST = { apiKey: 1, fragments: 1, saved: 1 };
+const PERSIST = { apiKey: 1, fragments: 1, saved: 1, chat: 1 };
 
 function set(patch) {
   state = { ...state, ...patch };
@@ -45,6 +46,7 @@ export const Store = {
   addFragment(text) { const t = (text || '').trim(); if (!t) return 0; set({ fragments: [...state.fragments, { id: 'f' + Date.now(), text: t }] }); return 1; },
   setPendingIdea(idea) { set({ pendingIdea: idea || null }); },
   clearPendingIdea() { if (state.pendingIdea) set({ pendingIdea: null }); },
+  setChat(messages) { set({ chat: messages || [] }); },
   // 批量加入素材，返回实际新增条数（用于"输入多少加多少计数"）
   addFragments(list) {
     const items = (list || []).map((t) => String(t).trim()).filter(Boolean)
