@@ -1,9 +1,10 @@
-// key-modal.jsx — 智谱 API Key 弹窗 (P1)
-// 由 Store.needKey 控制显隐；ensureKey() 缺 Key 时打开。Key 仅存本机浏览器。
+// KeyModal.jsx — 智谱 API Key 弹窗
+// 由 Store.needKey 控制显隐；agent.ensureKey() 缺 Key 时打开。Key 仅存本机浏览器。
+import React from 'react';
+import { G } from '../theme.js';
+import { Store, useStore } from '../store.js';
 
-const { G, Store, useStore } = window;
-
-function KeyModal() {
+export function KeyModal() {
   const needKey = useStore((s) => s.needKey);
   const apiKey = useStore((s) => s.apiKey);
   const [val, setVal] = React.useState('');
@@ -36,4 +37,3 @@ function KeyModal() {
     </div>
   );
 }
-window.KeyModal = KeyModal;

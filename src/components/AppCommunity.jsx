@@ -1,7 +1,9 @@
-// app-community.jsx — community feed in the glow style (hairline, de-carded)
-const { G, GIcon, GAvatar, GlowField } = window;
+// AppCommunity.jsx — 社区 feed（光晕风格）。当前为本地静态种子数据。
+import React from 'react';
+import { G } from '../theme.js';
+import { GIcon, GAvatar, GlowField } from './glow.jsx';
 
-function AppCommunity() {
+export function AppCommunity() {
   const [tab, setTab] = React.useState(0);
   const tabs = ['推荐', '关注', '最新'];
   const posts = [
@@ -12,7 +14,6 @@ function AppCommunity() {
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
       <GlowField x="86%" y="2%" r={230} intensity={0.5} motes={7} sun />
-      {/* header */}
       <div style={{ position: 'relative', zIndex: 2, padding: '4px 22px 0', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
         <div style={{ fontFamily: G.serif, fontSize: 24, color: G.ink, letterSpacing: 0.3 }}>社区</div>
         <div style={{ display: 'flex', gap: 18, paddingBottom: 4 }}>
@@ -23,7 +24,6 @@ function AppCommunity() {
         </div>
       </div>
       <div style={{ position: 'relative', zIndex: 2, fontSize: 11.5, color: G.inkFaint, padding: '6px 22px 8px', letterSpacing: 0.4 }}>看看大家从罐子里摇出了什么</div>
-      {/* feed */}
       <div className="glow-scroll" style={{ position: 'relative', zIndex: 2, flex: 1, minHeight: 0, overflowY: 'auto', padding: '0 22px 12px' }}>
         {posts.map((p, i) => (
           <div key={i} className="gpress" style={{ padding: '18px 0', borderTop: i ? `1px solid ${G.hair2}` : 'none', cursor: 'pointer' }}>
@@ -52,7 +52,6 @@ function AppCommunity() {
           </div>
         ))}
       </div>
-      {/* compose FAB — flat, soft (no glossy orb) */}
       <div className="gpress" style={{ position: 'absolute', right: 18, bottom: 18, zIndex: 3, width: 50, height: 50, borderRadius: '50%',
         display: 'grid', placeItems: 'center', cursor: 'pointer',
         background: G.gold, boxShadow: '0 6px 18px rgba(217,165,42,0.32)' }}>
@@ -61,5 +60,3 @@ function AppCommunity() {
     </div>
   );
 }
-
-Object.assign(window, { AppCommunity });

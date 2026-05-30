@@ -1,7 +1,7 @@
-// app-agent.jsx — Agent chat. De-carded overall, BUT message bubbles (user &
-// agent) keep a border, and the option prompt is a bordered selectable card.
-// 注：当前为设计稿静态对话；P3 将接入 window.Agent 的多步 tool-use 循环（真实对话）。
-const { G, GIcon, GlowField, Eyebrow } = window;
+// AppAgent.jsx — Agent 对话页。当前为设计稿静态对话；P3 将接入 agent 的多步 tool-use 循环。
+import React from 'react';
+import { G } from '../theme.js';
+import { GIcon, GlowField } from './glow.jsx';
 
 function GlowDot({ size = 24 }) {
   return (
@@ -13,7 +13,6 @@ function GlowDot({ size = 24 }) {
   );
 }
 
-// user bubble — gold-tinted, bordered
 function UserBubble({ children }) {
   return (
     <div style={{ alignSelf: 'flex-end', maxWidth: '80%', padding: '11px 15px', borderRadius: '16px 16px 5px 16px',
@@ -24,7 +23,6 @@ function UserBubble({ children }) {
   );
 }
 
-// agent bubble — white, bordered, with glow-dot avatar
 function AgentBubble({ children, maxW = '84%' }) {
   return (
     <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', maxWidth: maxW }}>
@@ -37,7 +35,7 @@ function AgentBubble({ children, maxW = '84%' }) {
   );
 }
 
-function AppAgent() {
+export function AppAgent() {
   const [picked, setPicked] = React.useState(null);
   const options = [
     { t: '会议录音 → 待办清单', d: '录音结束自动生成任务' },
@@ -47,12 +45,10 @@ function AppAgent() {
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
       <GlowField x="50%" y="14%" r={260} intensity={0.5} motes={9} spread={1.1} />
-      {/* header */}
       <div style={{ position: 'relative', zIndex: 2, textAlign: 'center', padding: '6px 22px 12px' }}>
         <div style={{ fontFamily: G.serif, fontSize: 18, color: G.ink, letterSpacing: 0.4 }}>灵感 Agent</div>
         <div style={{ fontSize: 11.5, color: G.inkFaint, marginTop: 3, letterSpacing: 0.4 }}>把一句话，聊成一个方案</div>
       </div>
-      {/* conversation */}
       <div className="glow-scroll" style={{ position: 'relative', zIndex: 2, flex: 1, minHeight: 0, overflowY: 'auto',
         padding: '4px 20px 12px', display: 'flex', flexDirection: 'column', gap: 18 }}>
         <div style={{ alignSelf: 'center', fontSize: 11, color: G.inkFaint, padding: '3px 12px', borderRadius: 999, border: `1px solid ${G.hair2}` }}>今天 14:08</div>
@@ -61,7 +57,6 @@ function AppAgent() {
 
         <AgentBubble>
           <div style={{ marginBottom: 12 }}>从你罐子里的素材，我揉出了三个方向 —— 选一个我帮你展开成可落地方案：</div>
-          {/* bordered option card */}
           <div style={{ border: `1px solid ${G.hair}`, borderRadius: 13, overflow: 'hidden', background: G.bgWarm }}>
             <div style={{ padding: '8px 13px', fontSize: 11, color: G.gold, letterSpacing: 1, borderBottom: `1px solid ${G.hair2}`, fontWeight: 600 }}>请选择一个方向</div>
             {options.map((o, i) => {
@@ -109,7 +104,6 @@ function AppAgent() {
           </div>
         </AgentBubble>
       </div>
-      {/* input — bordered pill */}
       <div style={{ position: 'relative', zIndex: 3, padding: '8px 20px 14px',
         background: 'linear-gradient(to top, rgba(253,251,244,0.97) 60%, rgba(253,251,244,0))' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 46, borderRadius: 999, padding: '0 8px 0 18px',
@@ -124,5 +118,3 @@ function AppAgent() {
     </div>
   );
 }
-
-Object.assign(window, { AppAgent });

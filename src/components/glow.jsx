@@ -1,45 +1,9 @@
-// glow-core.jsx — refined "光晕 / Aurora" system for the inspiration app
-// Soft halo "sun", diffuse bokeh light points, pale-yellow palette, editorial
-// serif headings, minimal de-carded chrome. Exported to window.
-
-const G = {
-  bg:      '#FDFBF4',   // warm near-white page
-  bgWarm:  '#FCF7EA',   // faint warm wash
-  ink:     '#2E2A20',   // warm near-black
-  inkSoft: '#7C7565',   // secondary
-  inkFaint:'#B6AE9C',   // tertiary / captions
-  faint:   '#A7A091',
-  hair:    'rgba(70,58,30,0.10)',
-  hair2:   'rgba(70,58,30,0.06)',
-  gold:    '#D9A52A',   // muted accent, used sparingly
-  goldSoft:'#EBC766',
-  glowA:   'rgba(255,224,130,0.55)',
-  glowB:   'rgba(255,236,170,0.30)',
-  serif:   '"Newsreader","Songti SC","Source Han Serif SC",Georgia,serif',
-  sans:    '"PingFang SC","Hiragino Sans GB","Segoe UI",system-ui,-apple-system,sans-serif',
-};
-G.inkFaint = '#B6AE9C';
-window.G = G;
-
-if (typeof document !== 'undefined' && !document.getElementById('glow-styles')) {
-  const s = document.createElement('style');
-  s.id = 'glow-styles';
-  s.textContent = `
-    @keyframes glowBreathe { 0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.92} 50%{transform:translate(-50%,-50%) scale(1.08);opacity:1} }
-    @keyframes mote { 0%{transform:translate(0,0);opacity:0} 18%{opacity:var(--o,.6)} 82%{opacity:var(--o,.6)} 100%{transform:translate(var(--dx,0),var(--dy,-26px));opacity:0} }
-    @keyframes twinkle { 0%,100%{opacity:.25;transform:scale(.9)} 50%{opacity:var(--o,.8);transform:scale(1.1)} }
-    @keyframes gGlow { 0%,100%{opacity:.45;transform:scale(1)} 50%{opacity:.85;transform:scale(1.14)} }
-    .glow-scroll::-webkit-scrollbar{display:none}
-    .glow-scroll{scrollbar-width:none;-ms-overflow-style:none}
-    .glow *{box-sizing:border-box}
-    .gpress{transition:opacity .15s ease, transform .15s ease}
-    .gpress:active{opacity:.6;transform:scale(.98)}
-  `;
-  document.head.appendChild(s);
-}
+// glow.jsx — "光晕 / Aurora" 设计系统基础组件：光晕粒子场 / 图标 / 头像 / 状态栏 / Tab / 外壳。
+import React from 'react';
+import { G } from '../theme.js';
 
 // ── Soft halo "sun" + diffuse bokeh light points ────────────────
-function GlowField({ x = '50%', y = '30%', r = 460, intensity = 1, motes = 22, sun = true, spread = 1 }) {
+export function GlowField({ x = '50%', y = '30%', r = 460, intensity = 1, motes = 22, sun = true, spread = 1 }) {
   const pts = React.useMemo(() => {
     const a = [];
     for (let i = 0; i < motes; i++) {
@@ -82,10 +46,9 @@ function GlowField({ x = '50%', y = '30%', r = 460, intensity = 1, motes = 22, s
     </div>
   );
 }
-window.GlowField = GlowField;
 
 // ── Minimal refined icons (thin stroke) ─────────────────────────
-function GIcon({ name, size = 20, color = 'currentColor', sw = 1.4 }) {
+export function GIcon({ name, size = 20, color = 'currentColor', sw = 1.4 }) {
   const p = {
     home:  'M3.5 10.2 12 3.6l8.5 6.6M6 9v10.4h12V9',
     spark: 'M12 3.2c.35 4 2 5.65 6 6-4 .35-5.65 2-6 6-.35-4-2-5.65-6-6 4-.35 5.65-2 6-6Z',
@@ -106,10 +69,9 @@ function GIcon({ name, size = 20, color = 'currentColor', sw = 1.4 }) {
     </svg>
   );
 }
-window.GIcon = GIcon;
 
 // avatar — flat warm disc + hairline ring + optional serif initial (no glossy orb)
-function GAvatar({ size = 40, ring = false, initial = '', glow = false }) {
+export function GAvatar({ size = 40, ring = false, initial = '', glow = false }) {
   return (
     <div style={{ position: 'relative', width: size, height: size, flex: `0 0 ${size}px`, display: 'grid', placeItems: 'center' }}>
       {glow && <div style={{ position: 'absolute', left: '50%', top: '50%', width: size * 1.7, height: size * 1.7, transform: 'translate(-50%,-50%)',
@@ -122,13 +84,12 @@ function GAvatar({ size = 40, ring = false, initial = '', glow = false }) {
     </div>
   );
 }
-window.GAvatar = GAvatar;
 
 // ── Status bar (minimal) ────────────────────────────────────────
-function GStatus() {
+export function GStatus({ zIndex = 4 }) {
   return (
     <div style={{ height: 30, flex: '0 0 30px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '0 20px', color: G.ink, position: 'relative', zIndex: 3 }}>
+      padding: '0 20px', color: G.ink, position: 'relative', zIndex }}>
       <span style={{ fontSize: 12.5, fontWeight: 600, letterSpacing: 0.2 }}>9:41</span>
       <div style={{ display: 'flex', gap: 5, alignItems: 'center', opacity: 0.85 }}>
         <svg width="15" height="10" viewBox="0 0 16 11" fill={G.ink}><rect x="0" y="6" width="3" height="5" rx="1"/><rect x="4.5" y="3.5" width="3" height="7.5" rx="1"/><rect x="9" y="1.5" width="3" height="9.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
@@ -138,56 +99,10 @@ function GStatus() {
   );
 }
 
-// ── Bottom tab bar (refined, hairline, de-carded) ───────────────
-const GTABS = [
-  { k: 'home', label: '灵感', icon: 'home' },
-  { k: 'agent', label: '对话', icon: 'spark' },
-  { k: 'community', label: '社区', icon: 'comm' },
-  { k: 'me', label: '我的', icon: 'user' },
-];
-function GTabBar({ active = 'home' }) {
-  return (
-    <div style={{ flex: '0 0 auto', position: 'relative', zIndex: 3, display: 'flex', justifyContent: 'space-around',
-      alignItems: 'center', padding: '11px 16px 16px', borderTop: `1px solid ${G.hair2}`,
-      background: 'linear-gradient(to top, rgba(253,251,244,0.96) 55%, rgba(253,251,244,0))' }}>
-      {GTABS.map((t) => {
-        const on = t.k === active;
-        return (
-          <div key={t.k} className="gpress" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, minWidth: 46, position: 'relative' }}>
-            {on && <div style={{ position: 'absolute', top: -11, width: 30, height: 30, borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(255,224,130,0.6), rgba(255,224,130,0) 70%)', filter: 'blur(4px)' }} />}
-            <GIcon name={t.icon} size={21} color={on ? G.gold : G.inkFaint} sw={on ? 1.7 : 1.4} />
-            <span style={{ fontSize: 10.5, color: on ? G.ink : G.inkFaint, fontWeight: on ? 600 : 500, letterSpacing: 0.3 }}>{t.label}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-window.GTabBar = GTabBar;
-
-// ── Phone shell ─────────────────────────────────────────────────
-function GPhone({ active, children, tab = true, bg }) {
-  return (
-    <div className="glow" style={{ width: '100%', height: '100%', background: bg || G.bg, display: 'flex', flexDirection: 'column',
-      position: 'relative', overflow: 'hidden', fontFamily: G.sans, color: G.ink }}>
-      <GStatus />
-      <div className="glow-scroll" style={{ flex: 1, minHeight: 0, position: 'relative', overflow: 'hidden' }}>
-        {children}
-      </div>
-      {tab && <GTabBar active={active} />}
-    </div>
-  );
-}
-window.GPhone = GPhone;
-
 // small refined label (eyebrow)
-function Eyebrow({ children, center = false }) {
+export function Eyebrow({ children, center = false }) {
   return (
     <div style={{ fontSize: 11, letterSpacing: 2.4, textTransform: 'uppercase', color: G.gold, fontWeight: 600,
       textAlign: center ? 'center' : 'left', fontFamily: G.sans }}>{children}</div>
   );
 }
-window.Eyebrow = Eyebrow;
-
-Object.assign(window, { G, GlowField, GIcon, GAvatar, GTabBar, GPhone, Eyebrow });

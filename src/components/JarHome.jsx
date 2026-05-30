@@ -1,37 +1,12 @@
-// jar-flow2.jsx — chubby GLASS jar + animated "AI synthesizing" transition.
-// Tap → jar shakes → light motes burst out & gather → swirl/think (AI process)
-// → condense into a filament → reveal the new idea. No hard cut.
-// P2: 摇一摇时后台调用 window.Agent.synthesize() 跑真实合成，结果填入 PageResult。
-const { G, GIcon, GPhone, Eyebrow } = window;
-const FP = { paper: '#FEFDF8' };
+// JarHome.jsx — 首页灵感罐：玻璃罐 + 摇一摇 → AI 合成动画 → 揭晓新灵感。
+// 摇一摇时后台调用 agent.synthesize() 跑真实合成，结果填入结果页。
+import React from 'react';
+import { G } from '../theme.js';
+import { GIcon, Eyebrow } from './glow.jsx';
+import { Store, useStore } from '../store.js';
+import { Agent } from '../lib/agent.js';
 
-if (typeof document !== 'undefined' && !document.getElementById('jarflow2-styles')) {
-  const s = document.createElement('style');
-  s.id = 'jarflow2-styles';
-  s.textContent = `
-    @keyframes f2Mote { 0%{transform:translateY(0);opacity:0} 22%{opacity:1} 80%{opacity:1} 100%{transform:translateY(-28px);opacity:0} }
-    @keyframes f2Twinkle { 0%,100%{opacity:.3} 50%{opacity:1} }
-    @keyframes f2Breathe { 0%,100%{opacity:.62} 50%{opacity:1} }
-    @keyframes f2Dot { 0%,100%{opacity:.45} 50%{opacity:1} }
-    @keyframes f2Line { 0%,100%{opacity:.6;transform:scaleX(.92)} 50%{opacity:1;transform:scaleX(1)} }
-    @keyframes f2Shake {
-      0%,100%{transform:translateX(0) rotate(0)}
-      10%{transform:translateX(-8px) rotate(-4.5deg)} 24%{transform:translateX(8px) rotate(4.5deg)}
-      38%{transform:translateX(-7px) rotate(-3.5deg)} 52%{transform:translateX(7px) rotate(3.5deg)}
-      66%{transform:translateX(-5px) rotate(-2.4deg)} 80%{transform:translateX(4px) rotate(1.6deg)}
-    }
-    @keyframes f2Spin { to { transform: rotate(360deg); } }
-    @keyframes f2SpinR { to { transform: rotate(-360deg); } }
-    @keyframes f2Halo { 0%,100%{opacity:.55;transform:translate(-50%,-50%) scale(1)} 50%{opacity:1;transform:translate(-50%,-50%) scale(1.12)} }
-    @keyframes f2CorePulse { 0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.9} 50%{transform:translate(-50%,-50%) scale(1.18);opacity:1} }
-    @keyframes f2RingPulse { 0%{transform:translate(-50%,-50%) scale(.8);opacity:.5} 100%{transform:translate(-50%,-50%) scale(1.5);opacity:0} }
-    @keyframes f2Rise { from{transform:translateY(10px)} to{transform:translateY(0)} }
-    @keyframes f2Flare { 0%{opacity:0;transform:translate(-50%,-50%) scale(.2)} 40%{opacity:1} 60%{opacity:1;transform:translate(-50%,-50%) scale(1.3)} 100%{opacity:0;transform:translate(-50%,-50%) scale(2.2)} }
-    @keyframes f2Bloom2 { 0%,100%{transform:translate(-50%,-50%) scale(1.08);opacity:.5} 50%{transform:translate(-50%,-50%) scale(.9);opacity:.9} }
-    @keyframes f2RingSoft { 0%{transform:translate(-50%,-50%) scale(.45);opacity:0} 18%{opacity:.7} 100%{transform:translate(-50%,-50%) scale(1.85);opacity:0} }
-  `;
-  document.head.appendChild(s);
-}
+const serif = (s, st = {}) => <span style={{ fontFamily: G.serif, color: G.ink, ...st }}>{s}</span>;
 
 // motes inside the jar
 function F2Motes({ n = 12, energized = false }) {
@@ -47,18 +22,14 @@ function F2Motes({ n = 12, energized = false }) {
   ));
 }
 
-// ── GLASS JAR — original rounded-rect form, a touch wider, glassy/dimensional ──
-function ChubbyJar({ shaking = false, fading = false }) {
-  const W = 224, H = 348;          // widened a little from the original
-  const lidLine = 'rgba(140,108,52,0.34)';   // soft, visible (not a hard flat stroke)
+// ── GLASS JAR ──
+export function ChubbyJar({ shaking = false, fading = false }) {
+  const W = 224, H = 348;
   return (
     <div style={{ position: 'relative', width: W, height: H, opacity: fading ? 0 : 1, transition: 'opacity .4s ease',
       animation: shaking ? 'f2Shake 0.8s ease-in-out' : 'none', transformOrigin: '50% 82%' }}>
-      {/* ambient halo */}
       <div style={{ position: 'absolute', left: '50%', top: '60%', width: 210, height: 210, transform: 'translate(-50%,-50%)',
         background: 'radial-gradient(circle, rgba(255,224,134,0.5), rgba(255,224,134,0) 68%)', filter: 'blur(15px)' }} />
-
-      {/* ── LID — stepped form (knob + dome + rim), glassy ── */}
       {/* knob */}
       <div style={{ position: 'absolute', top: 6, left: '50%', transform: 'translateX(-50%)', width: 42, height: 17, zIndex: 6,
         borderRadius: '11px 11px 7px 7px',
@@ -71,49 +42,41 @@ function ChubbyJar({ shaking = false, fading = false }) {
         boxShadow: 'inset 9px 7px 14px rgba(255,255,255,0.6), inset -11px -8px 16px rgba(205,165,80,0.32), 0 4px 9px rgba(175,135,55,0.22)' }}>
         <div style={{ position: 'absolute', top: 6, left: 18, width: 12, height: 18, borderRadius: 10, background: 'linear-gradient(180deg, rgba(255,255,255,0.85), transparent)', filter: 'blur(0.6px)' }} />
       </div>
-      {/* mouth rim / lip (wider overhang) */}
+      {/* mouth rim */}
       <div style={{ position: 'absolute', top: 50, left: '50%', transform: 'translateX(-50%)', width: 138, height: 17, zIndex: 4,
         borderRadius: '8px 8px 6px 6px',
         background: 'linear-gradient(180deg, rgba(255,252,242,0.95), rgba(238,214,158,0.86))',
         boxShadow: 'inset 0 2px 3px rgba(255,255,255,0.82), inset 0 -3px 6px rgba(205,165,80,0.28), 0 3px 7px rgba(175,135,55,0.2)' }} />
-
-      {/* ── BODY — rounded-rect glass, dimensional shading (no flat outline) ── */}
+      {/* body */}
       <div style={{ position: 'absolute', top: 62, left: '50%', transform: 'translateX(-50%)', width: W, height: H - 70, zIndex: 3,
         borderRadius: '34px 34px 56px 56px', overflow: 'hidden', backdropFilter: 'blur(1px)',
         background: 'radial-gradient(125% 105% at 36% 22%, rgba(255,255,255,0.7), rgba(255,251,238,0.42) 32%, rgba(255,235,176,0.32) 64%, rgba(248,222,150,0.44) 100%)',
         boxShadow: [
-          'inset 20px 18px 34px rgba(255,255,255,0.55)',   // top-left bright
-          'inset -24px -20px 44px rgba(210,165,70,0.30)',  // bottom-right warm shade → roundness
-          'inset 0 -16px 38px rgba(255,222,132,0.42)',     // pooled light
-          '0 24px 50px rgba(195,150,55,0.20)',             // drop shadow
-          '0 0 0 1px rgba(190,150,70,0.16)',               // faint edge so it reads on cream
+          'inset 20px 18px 34px rgba(255,255,255,0.55)',
+          'inset -24px -20px 44px rgba(210,165,70,0.30)',
+          'inset 0 -16px 38px rgba(255,222,132,0.42)',
+          '0 24px 50px rgba(195,150,55,0.20)',
+          '0 0 0 1px rgba(190,150,70,0.16)',
         ].join(', ') }}>
-        {/* pooled light at base */}
         <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '46%',
           background: 'radial-gradient(118% 84% at 50% 124%, rgba(255,224,134,0.68), rgba(255,234,168,0.15) 56%, transparent 74%)' }} />
         <F2Motes n={13} energized={shaking} />
-        {/* big soft specular highlight (top-left) */}
         <div style={{ position: 'absolute', top: 22, left: 26, width: 60, height: 150, borderRadius: '50%', transform: 'rotate(16deg)',
           background: 'radial-gradient(closest-side, rgba(255,255,255,0.68), rgba(255,255,255,0) 72%)', filter: 'blur(5px)' }} />
-        {/* thin crescent highlight on right edge */}
         <div style={{ position: 'absolute', top: 36, right: 18, width: 14, height: 170, borderRadius: '50%', transform: 'rotate(-6deg)',
           background: 'linear-gradient(180deg, rgba(255,255,255,0.46), rgba(255,255,255,0) 82%)', filter: 'blur(3px)' }} />
-        {/* faint bottom-left bounce light */}
         <div style={{ position: 'absolute', bottom: 24, left: 24, width: 48, height: 38, borderRadius: '50%',
           background: 'radial-gradient(closest-side, rgba(255,240,190,0.48), transparent 72%)', filter: 'blur(5px)' }} />
       </div>
-      {/* contact reflection */}
       <div style={{ position: 'absolute', bottom: -4, left: '50%', transform: 'translateX(-50%)', width: 164, height: 22, borderRadius: '50%',
         background: 'radial-gradient(circle, rgba(255,218,116,0.32), transparent 70%)', filter: 'blur(7px)' }} />
     </div>
   );
 }
-window.ChubbyJar = ChubbyJar;
 
-const serif = (s, st = {}) => <span style={{ fontFamily: G.serif, color: G.ink, ...st }}>{s}</span>;
-
-// ── PAGE · idle ───────────────────────────────────────────────────
+// ── PAGE · idle ──
 function PageIdle({ onShake, shaking, fading }) {
+  const count = useStore((s) => s.fragments.length);
   return (
     <>
       <div style={{ position: 'relative', zIndex: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 22px 0' }}>
@@ -122,7 +85,7 @@ function PageIdle({ onShake, shaking, fading }) {
       </div>
       <div style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <div style={{ height: 36 }} />
-        <Eyebrow center>{window.useStore((s) => s.fragments.length)} 份素材 · 静静发酵</Eyebrow>
+        <Eyebrow center>{count} 份素材 · 静静发酵</Eyebrow>
         <div className="gpress" onClick={onShake} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
           <ChubbyJar shaking={shaking} fading={fading} />
         </div>
@@ -139,23 +102,21 @@ function PageIdle({ onShake, shaking, fading }) {
   );
 }
 
-// ── SYNTH SEQUENCE · gather → think → condense (AI process viz) ─────
-// pending=true 表示后台 API 还没返回；动画跑完后会停在「正在合成」直到结果就绪。
+// ── SYNTH SEQUENCE ── (pending=true 表示后台 API 还没返回；动画跑完会等结果就绪再揭晓)
 function SynthSequence({ onDone, pending }) {
-  const [phase, setPhase] = React.useState('gather'); // gather | think | condense
+  const [phase, setPhase] = React.useState('gather');
   const [cap, setCap] = React.useState(0);
   const [timelineDone, setTimelineDone] = React.useState(false);
   const captions = ['收集你的素材', '寻找隐藏的关联', '正在合成新灵感'];
   React.useEffect(() => {
     const t = [];
     t.push(setTimeout(() => setPhase('think'), 950));
-    t.push(setTimeout(() => { setPhase('condense'); }, 2500));
+    t.push(setTimeout(() => setPhase('condense'), 2500));
     t.push(setTimeout(() => setTimelineDone(true), 3250));
     t.push(setTimeout(() => setCap(1), 950));
     t.push(setTimeout(() => setCap(2), 1850));
     return () => t.forEach(clearTimeout);
   }, []);
-  // 动画结束 + 结果就绪 → 揭晓
   React.useEffect(() => { if (timelineDone && !pending) onDone(); }, [timelineDone, pending]);
 
   const ringR = 86;
@@ -173,23 +134,15 @@ function SynthSequence({ onDone, pending }) {
   const condensing = phase === 'condense';
 
   return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 5, background: FP.paper, display: 'flex', flexDirection: 'column',
+    <div style={{ position: 'absolute', inset: 0, zIndex: 5, background: '#FEFDF8', display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-      {/* breathing background wash */}
       <div style={{ position: 'absolute', left: '50%', top: '44%', width: 320, height: 320, transform: 'translate(-50%,-50%)',
         background: 'radial-gradient(circle, rgba(255,228,140,0.42), rgba(255,228,140,0) 66%)', filter: 'blur(20px)', animation: 'f2Halo 4s ease-in-out infinite' }} />
-
-      {/* vortex field */}
       <div style={{ position: 'absolute', left: '50%', top: '44%', width: 0, height: 0 }}>
-        {/* orbit rings (appear in think) */}
         <div style={{ position: 'absolute', left: '50%', top: '50%', width: 200, height: 184, transform: 'translate(-50%,-50%)', borderRadius: '50%',
-          border: '1px dashed rgba(217,165,42,0.28)', opacity: phase === 'think' ? 1 : 0.001, transition: 'opacity .5s',
-          animation: 'f2Spin 7s linear infinite' }} />
+          border: '1px dashed rgba(217,165,42,0.28)', opacity: phase === 'think' ? 1 : 0.001, transition: 'opacity .5s', animation: 'f2Spin 7s linear infinite' }} />
         <div style={{ position: 'absolute', left: '50%', top: '50%', width: 134, height: 124, transform: 'translate(-50%,-50%)', borderRadius: '50%',
-          border: '1px dashed rgba(217,165,42,0.22)', opacity: phase === 'think' ? 1 : 0.001, transition: 'opacity .5s',
-          animation: 'f2SpinR 5s linear infinite' }} />
-
-        {/* spinning particle holder */}
+          border: '1px dashed rgba(217,165,42,0.22)', opacity: phase === 'think' ? 1 : 0.001, transition: 'opacity .5s', animation: 'f2SpinR 5s linear infinite' }} />
         <div style={{ position: 'absolute', left: 0, top: 0, animation: phase === 'gather' ? 'none' : 'f2Spin 4.5s linear infinite' }}>
           {parts.map((p, i) => {
             const tx = condensing ? 0 : (gathered ? p.rx : p.sx);
@@ -206,8 +159,6 @@ function SynthSequence({ onDone, pending }) {
             );
           })}
         </div>
-
-        {/* ── A · 柔光花苞（多层呼吸光晕，无硬边）── */}
         {[
           { s: 132, c: 'rgba(255,236,170,0.5)', a: 'f2Halo 4.5s' },
           { s: 86, c: 'rgba(255,224,130,0.62)', a: 'f2Bloom2 5s' },
@@ -217,24 +168,18 @@ function SynthSequence({ onDone, pending }) {
             transform: 'translate(-50%,-50%)', borderRadius: '50%', transition: 'width .6s, height .6s',
             background: `radial-gradient(circle, ${g.c}, transparent 68%)`, filter: 'blur(9px)', animation: `${g.a} ease-in-out infinite` }} />
         ))}
-        {/* soft bright heart (no hard edge) */}
         <div style={{ position: 'absolute', left: '50%', top: '50%', width: 24, height: 24, borderRadius: '50%', transform: 'translate(-50%,-50%)',
           background: 'radial-gradient(circle, rgba(255,250,225,0.95), rgba(255,228,150,0.32) 64%, transparent 80%)', filter: 'blur(3px)', animation: 'f2Bloom2 3.6s ease-in-out infinite' }} />
-
-        {/* ── D · 同心柔环（柔光涟漪外扩，无实心边）── */}
         {(phase === 'think' || condensing) && [0, 1, 2].map((i) => (
           <div key={i} style={{ position: 'absolute', left: '50%', top: '50%', width: 70, height: 64, borderRadius: '50%', transform: 'translate(-50%,-50%)',
             background: 'radial-gradient(closest-side, transparent 56%, rgba(255,222,130,0.5) 78%, transparent 92%)',
             filter: 'blur(3px)', animation: `f2RingSoft 3s ease-out ${i * 1}s infinite` }} />
         ))}
-        {/* final soft flare on condense */}
         {condensing && (
           <div style={{ position: 'absolute', left: '50%', top: '50%', width: 150, height: 150, borderRadius: '50%', transform: 'translate(-50%,-50%)',
             background: 'radial-gradient(circle, rgba(255,240,185,0.85), rgba(255,214,100,0) 70%)', filter: 'blur(6px)', animation: 'f2Flare 0.7s ease-out forwards' }} />
         )}
       </div>
-
-      {/* caption */}
       <div style={{ position: 'absolute', left: 0, right: 0, bottom: 150, textAlign: 'center' }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
           {serif(captions[cap], { fontFamily: G.serif, fontSize: 17, letterSpacing: 0.6 })}
@@ -247,15 +192,14 @@ function SynthSequence({ onDone, pending }) {
   );
 }
 
-// ── PAGE · result ─────────────────────────────────────────────────
+// ── PAGE · result ──
 function PageResult({ onBack, onAgain, onExpand, result, err }) {
   const [saved, setSaved] = React.useState(false);
-  // 真实合成数据；缺省回退到示例文案
   const r = result || { lead: '给独居老人的', accent: '方言会议助手', blurb: '', sources: ['周会复盘', '方言天气', '截图美化器'], constraint: '' };
   const toggleSave = () => {
     setSaved((s) => {
       const next = !s;
-      if (next && result) window.Store.addSaved({ lead: r.lead, accent: r.accent, blurb: r.blurb, sources: r.sources });
+      if (next && result) Store.addSaved({ lead: r.lead, accent: r.accent, blurb: r.blurb, sources: r.sources });
       return next;
     });
   };
@@ -263,14 +207,14 @@ function PageResult({ onBack, onAgain, onExpand, result, err }) {
     return (
       <>
         <div style={{ position: 'relative', zIndex: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 22px 0' }}>
-          <span className="gpress" onClick={onBack} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13.5, color: window.G.inkSoft, cursor: 'pointer' }}>
+          <span className="gpress" onClick={onBack} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13.5, color: G.inkSoft, cursor: 'pointer' }}>
             <span style={{ fontSize: 18, lineHeight: 1 }}>‹</span> 罐子
           </span>
         </div>
         <div style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 40px', textAlign: 'center' }}>
-          <div style={{ fontFamily: window.G.serif, fontSize: 19, color: window.G.ink, marginBottom: 12 }}>合成没能完成</div>
-          <div style={{ fontSize: 13, color: window.G.inkSoft, lineHeight: 1.6, marginBottom: 26 }}>{err}</div>
-          <span className="gpress" onClick={onAgain} style={{ fontFamily: window.G.serif, fontSize: 16, color: window.G.ink, borderBottom: `1.6px solid ${window.G.gold}`, paddingBottom: 4, cursor: 'pointer' }}>再试一次 →</span>
+          <div style={{ fontFamily: G.serif, fontSize: 19, color: G.ink, marginBottom: 12 }}>合成没能完成</div>
+          <div style={{ fontSize: 13, color: G.inkSoft, lineHeight: 1.6, marginBottom: 26 }}>{err}</div>
+          <span className="gpress" onClick={onAgain} style={{ fontFamily: G.serif, fontSize: 16, color: G.ink, borderBottom: `1.6px solid ${G.gold}`, paddingBottom: 4, cursor: 'pointer' }}>再试一次 →</span>
         </div>
       </>
     );
@@ -285,24 +229,19 @@ function PageResult({ onBack, onAgain, onExpand, result, err }) {
       </div>
       <div style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 34px', animation: 'f2Rise 0.6s ease-out' }}>
         <Eyebrow center>刚刚合成 · 全新灵感</Eyebrow>
-        {/* dynamic glow above a light filament (no hard ball) */}
         <div style={{ position: 'relative', height: 92, width: 220, display: 'grid', placeItems: 'center', margin: '12px 0 6px' }}>
-          {/* breathing bloom layers */}
           <div style={{ position: 'absolute', left: '50%', top: '40%', width: 130, height: 130, transform: 'translate(-50%,-50%)',
             background: 'radial-gradient(circle, rgba(255,228,140,0.5), rgba(255,228,140,0) 66%)', filter: 'blur(11px)', animation: 'f2Halo 4.5s ease-in-out infinite' }} />
           <div style={{ position: 'absolute', left: '50%', top: '40%', width: 64, height: 64, transform: 'translate(-50%,-50%)',
             background: 'radial-gradient(circle, rgba(255,240,180,0.75), rgba(255,224,130,0) 64%)', filter: 'blur(7px)', animation: 'f2Bloom2 3.6s ease-in-out infinite' }} />
-          {/* soft heart (diffuse, not a ball) */}
           <div style={{ position: 'absolute', left: '50%', top: '40%', width: 20, height: 20, transform: 'translate(-50%,-50%)', borderRadius: '50%',
             background: 'radial-gradient(circle, rgba(255,250,225,0.95), rgba(255,228,150,0.3) 62%, transparent 80%)', filter: 'blur(2px)', animation: 'f2Bloom2 3.6s ease-in-out infinite' }} />
-          {/* drifting motes for liveliness */}
           {[0, 1, 2, 3, 4].map((i) => (
             <span key={i} style={{ position: 'absolute', left: `${36 + i * 8}%`, top: '54%', width: 3, height: 3, borderRadius: '50%',
               background: 'radial-gradient(circle, rgba(255,244,198,1), rgba(255,214,100,0) 75%)', filter: 'blur(0.4px)',
               '--dx': `${(i % 2 ? 1 : -1) * 6}px`, '--dy': '-22px',
               animation: `f2Mote ${3.5 + i * 0.5}s linear ${-i * 0.8}s infinite` }} />
           ))}
-          {/* light filament */}
           <div style={{ position: 'absolute', bottom: 12, width: 150, height: 2, borderRadius: 2,
             background: 'linear-gradient(90deg, transparent, rgba(244,178,51,0.95), transparent)',
             boxShadow: '0 0 12px 1px rgba(244,178,51,0.5)', animation: 'f2Line 4s ease-in-out infinite' }} />
@@ -325,44 +264,24 @@ function PageResult({ onBack, onAgain, onExpand, result, err }) {
   );
 }
 
-// ── shared real-synthesis hook ────────────────────────────────────
-// stage: idle | shaking | synth | result   —— 摇一摇时后台跑真实合成
-function useJarSynth() {
+// 灵感罐主流程（无外壳，供 App 复用）。stage: idle | shaking | synth | result
+export function JarHome({ onExpand }) {
   const [stage, setStage] = React.useState('idle');
   const [result, setResult] = React.useState(null);
   const [err, setErr] = React.useState(null);
   const [pending, setPending] = React.useState(false);
   const go = () => {
     if (stage !== 'idle') return;
-    if (!window.Agent.ensureKey()) return;   // 没 Key → 弹窗，停在 idle
+    if (!Agent.ensureKey()) return;   // 没 Key → 弹窗，停在 idle
     setResult(null); setErr(null); setPending(true);
     setStage('shaking');
     setTimeout(() => setStage('synth'), 720);
-    window.Agent.synthesize()
+    Agent.synthesize()
       .then((r) => setResult(r))
       .catch((e) => setErr(e.message === 'NO_KEY' ? '请先连接智谱 API Key' : e.message))
       .finally(() => setPending(false));
   };
   const reset = () => { setStage('idle'); setResult(null); setErr(null); };
-  return { stage, setStage, result, err, pending, go, reset };
-}
-
-// ── wrapper（独立预览用，自带 GPhone 外壳）─────────────────────────
-function JarFlow2() {
-  const { stage, setStage, result, err, pending, go, reset } = useJarSynth();
-  return (
-    <GPhone active="home" bg={FP.paper}>
-      {stage === 'result'
-        ? <PageResult onBack={reset} onAgain={() => { reset(); setTimeout(go, 0); }} result={result} err={err} />
-        : <PageIdle onShake={go} shaking={stage === 'shaking'} fading={stage === 'synth'} />}
-      {stage === 'synth' && <SynthSequence pending={pending} onDone={() => setStage('result')} />}
-    </GPhone>
-  );
-}
-
-// JarHome — same flow but WITHOUT the GPhone wrapper, for the shared app shell
-function JarHome({ onExpand }) {
-  const { stage, setStage, result, err, pending, go, reset } = useJarSynth();
   return (
     <>
       {stage === 'result'
@@ -372,4 +291,3 @@ function JarHome({ onExpand }) {
     </>
   );
 }
-Object.assign(window, { JarFlow2, JarHome, ChubbyJar });
