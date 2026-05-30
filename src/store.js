@@ -19,7 +19,8 @@ const save = (k, v) => { try { localStorage.setItem(NS + k, JSON.stringify(v)); 
 
 // 对话历史结构升级：旧版是纯文字 {text}，新版是结构化 {say, options}。
 // 版本不符就清掉旧 chat —— 避免开发期残留的纯文字旧对话盖住新的可点选项交互。
-const CHAT_VERSION = 2;
+// 注意：bump 这个数字 + 整页硬刷新，才能强制清掉浏览器里的旧对话。
+const CHAT_VERSION = 3;
 if (load('chatVer', 0) !== CHAT_VERSION) { save('chat', []); save('chatVer', CHAT_VERSION); }
 
 let state = {

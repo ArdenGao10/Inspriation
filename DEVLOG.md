@@ -327,3 +327,56 @@
 
 - `store.js`：加 `CHAT_VERSION`，加载时版本不符就清空旧 `chat`，用户一刷新就是干净的新结构化对话，不用手动清缓存。
 - `AppAgent.jsx`：开场白从纯文字升级为带 `options` 的消息（`greetingMsg()`：「帮我想个新点子」「我有个想法想聊聊」），一进对话页就有可点选项，直观体现「可选模式」；`clearChat`、开场 effect 都用它。
+
+## 步骤 18 · 首页摇一摇合成提速（glm-4.6 → flash），找到「生成灵感很慢」真凶
+
+> 用户反馈摇一摇生成灵感很慢。实测对比同一条合成请求：
+
+| 模型 | 耗时 |
+|---|---|
+| glm-4.6（原来） | **86.2 秒** |
+| glm-4-flash（改后） | **3.2 秒** |
+
+- 真凶就是合成在用 `glm-4.6`（带推理 + JSON 模式，这次跑了 86 秒）。`agent.js` 的 `synthesize()` 给 `complete()` 加 `model: CHAT_MODEL` → 走 glm-4-flash + 强制 JSON，快约 27 倍。
+- 质量取舍：flash 合成的「梗」略逊于 glm-4.6，但 86s→3s 完全值得；想找回质量可设 `VITE_ZHIPU_MODEL` 走强模型（但会慢）。
+
+## 步骤 19 · 对话「后面又变文字」根治：换稳模型 glm-4.5-flash + 正则兜底
+
+> 开场白带选项 OK，但真实多轮回复又退化成纯文字。实测定位到：快模型在多轮里破防。
+
+- 实测 4 轮真实流（开场白点选 → 给灵感 → 拆 MVP → 给技术栈）：
+  - `glm-4-flash` **1/4**：轮2 起直接吐纯文字带「1. 2. 3.」，连 `response_format` 都没约束住 → 这就是「后面又变文字」的真因。
+  - `glm-4.5-air` 3/4：偶发返回空 content。
+  - `glm-4.5-flash` **4/4 全稳**（代价：慢且波动 7-22s）。
+- 模型分工：`SYNTH_MODEL=glm-4-flash`（合成，快）、`CHAT_MODEL=glm-4.5-flash`（对话，稳）；均可用 env 覆盖。
+- 兜底（`AppAgent.jsx` 新增 `salvageOptions`）：`parseAgentReply` 在 JSON 解析失败时，从纯文字的「1./·」列表里抠出可点选项 → 即使模型再破防，也不退化成纯文字。双保险。
+- 已知代价：glm-4.5-flash 慢且波动（7-22s）。用户当前**优先「功能稳定」而非速度**；速度优化（streaming 等）留到选项稳定确认后再做。
+- `npm run build` 通过；未 push（按约定等用户确认）。
+
+## 步骤 20 · 升级为真·工具调用 Agent（read_jar / save_idea + 选项抽取）
+
+> 用户点醒：别执着「卡片必现」，要的是**真 Agent** + 让它**自己判断**给卡片还是文字。于是从「结构化对话」升级到「工具调用 Agent」。
+
+### 为什么没用 reply_to_user 工具
+- 先试「把回复也做成 `reply_to_user` 工具」——实测 GLM 不爱用，读完 `read_jar` 就直接吐自然文字，options 还是空。
+- 改成顺着模型脾气：**工具只管「行动」**，回复用模型擅长的自然文字，选项再单独抽取。
+
+### 架构（`agent.js` 新增 `runAgent` + `extractOptions`）
+- `AGENT_TOOLS`：`read_jar`（读灵感罐真实素材）、`save_idea`（存收藏）。`complete` 已支持 `tools`（tool_choice auto）。
+- `runAgent`：工具调用循环（≤4 步）—— 模型自主调 read_jar/save_idea、拿到结果继续，最后输出自然文字回复结束。
+- `extractOptions`：把回复文字喂给快模型（glm-4-flash + JSON）抽「有没有让用户选的方向」→ 有就给选项卡、没有就纯文字。**模型自己决定列不列方向 = 自己判断卡片 vs 文字**。
+- `AppAgent.sendUser` 改调 `Agent.runAgent`；`salvageOptions` 作本地正则兜底；删掉旧的 `parseAgentReply`。
+- 模型分工：对话 `CHAT_MODEL=glm-4.5-flash`（tool calling 稳）、抽取/合成 `SYNTH_MODEL=glm-4-flash`（快）。
+
+### 实测（端到端 3 轮）
+- 每轮都自主调 `read_jar` 读真实素材、每轮都抽到 3 个选项卡 ✅。这才是真 Agent：有工具、会行动、自主决策；卡片 vs 文字由它自己定。
+
+### 已知问题：慢
+- 三轮 15s / 10s / **38s**。glm-4.5-flash 慢 + 工具循环多次调用叠加。**功能对了但速度糟**，下一步专门优化（streaming / 调模型 / 减少调用次数）。
+- `npm run build` 通过。
+
+> 协作约定更新（2026-05-31）：用户恢复**实时 push**，之前「确认后再 push」的约定解除。
+
+---
+
+> ⚠️ 协作约定（2026-05-31 起）：功能未经用户亲自确认前**不要 push**，只在本地改 + 写 DEVLOG；等用户说「可以下一步」再一次性 push。

@@ -82,7 +82,7 @@ function parseAgentBlocks(text) {
     }
   };
   for (const raw of lines) {
-    const line = raw.replace(/\s+$/, '');
+    const line = raw.replace(/\s+$/, '').replace(/^\s*#{1,6}\s+/, ''); // 去掉模型偶发的 ## markdown 标题前缀
     const li = line.match(/^\s*[*\-•·]\s+(.+)$/);
     if (li) {
       flushPara();
@@ -96,6 +96,26 @@ function parseAgentBlocks(text) {
   }
   flushPara();
   return blocks;
+}
+
+// JSON 兜底：模型偶发吐纯文字带编号/列表（「1. xxx」「· xxx」）时，从里面抠出可点选项，
+// 让交互不至于退化成纯文字。返回 { say, options } 或 null（抠不出选项就当纯文字）。
+function salvageOptions(text) {
+  const opts = [];
+  const sayLines = [];
+  for (const raw of String(text || '').split('\n')) {
+    const m = raw.match(/^\s*(?:\d+[.、)]\s*|[·*\-•]\s+)(.+)$/);
+    if (m) {
+      const item = m[1].replace(/\*\*/g, '').trim();
+      const c = item.match(/^(.{2,16}?)[：:]\s*(.+)$/);
+      if (c) opts.push({ label: c[1].trim().slice(0, 12), desc: c[2].trim().slice(0, 24) });
+      else opts.push({ label: item.slice(0, 12), desc: item.length > 12 ? item.slice(12, 36) : '' });
+    } else if (!opts.length) {
+      sayLines.push(raw);
+    }
+  }
+  if (opts.length >= 2) return { say: sayLines.join('\n').trim() || '给你几个方向，挑一个：', options: opts.slice(0, 3) };
+  return null;
 }
 
 // 可点击的方向卡片：左侧金色序号圈 · 中间描述 · 右侧箭头。
@@ -175,24 +195,19 @@ function buildInitialUserMessage(idea) {
     : `帮我展开这个灵感：${title}`;
 }
 
-// 共创式对话的 system prompt。要求严格 JSON 输出 → 前端确定性渲染「说的话 + 可点选项卡」。
-const SYS_PROMPT = `你是「灵感 Agent」，一个有经验的产品搭子。和用户一步步把一个 idea 聊成能落地的方案。
+// 共创式对话的 system prompt（工具版）。模型有 read_jar / save_idea 工具，回复用自然文字，
+// 想给选项时在话里清楚列出方向，由前端 extractOptions 抽成可点卡片。
+const SYS_PROMPT = `你是「灵感 Agent」，一个有经验的产品搭子，和用户一步步把一个 idea 聊成能落地的方案。
 
-【原则】
-- 共创伙伴，不是方案生成器。每轮只推进一小步，简短（say 不超过 150 字）。
-- 口语化中文，像朋友聊天。不要 markdown、不要加粗。
-- 多数时候给用户 2-3 个「可点的选项」，等他选了再继续；不要一次倒完整方案。
+【风格】共创伙伴，不是方案生成器；每轮只推进一小步、简短；口语化中文，像朋友聊天，不要 markdown、不要加粗。
 
-【对话节奏】
-- 开场 / 拿到 idea：一句话说你的理解（带点趣味），然后给 2-3 个可深入的方向当 options。
-- 用户选了某个方向：2-3 句说清核心玩法 + 1 句目标用户，再给 options，比如「拆解 MVP」「找类似产品」「换个方向」。
-- 拆 MVP：say 里列 3-5 步行动（每步单独一行，行首用「· 」），可再给 options「给技术栈」「画原型」「收藏进罐」。
+【你有的工具】
+- read_jar：读用户灵感罐里的真实素材。开场、帮用户碰撞新点子、或想基于他的真实素材聊时，先调它看看再开口。
+- save_idea：用户明确说想收藏 / 保存某个想法时，调它存进收藏。
 
-【输出格式 · 必须严格遵守】
-只输出一个 json 对象（不要代码围栏、不要 markdown、不要多余文字）：
-{"say":"要对用户说的话","options":[{"label":"选项短标题(不超过12字)","desc":"一句话说明(不超过20字)"}]}
-- options 是给用户点击的选项，0-3 个；当前不需要让用户选择时给 []（空数组）。
-- say 里不要重复 options 的内容，也不要写「方向A」「1.」这种编号——选项由 options 字段单独给。`;
+【怎么给选项】想让用户在几个方向 / 方案里挑时，就在话里把它们清楚地一条条列出来（每条一行：简明标题 + 一句话）；只是解释或追问时正常说话就行。给不给选项你自己判断。
+
+【节奏】开场或拿到 idea：先 read_jar 看素材，再给 2-3 个方向让用户挑。用户选了方向：说清核心玩法 + 目标用户是谁，再给下一步选项（拆解 MVP / 找类似产品 / 换个方向）。拆 MVP：列 3-5 步可执行的行动。`;
 
 // 无灵感进来时的开场白（也用于「新对话」重置）。开场就带可点选项，直观体现「可选模式」。
 const GREETING = '你今天有什么想聊的灵感吗？可以直接打字，也可以点下面的选项开始。';
@@ -225,20 +240,7 @@ export function AppAgent() {
     })),
   ];
 
-  // 把模型返回的 content 解析成结构化 agent 消息 { say, options }。
-  // 解析失败（模型没按 JSON 输出）就整段当纯文字兜底，绝不让交互崩掉。
-  const parseAgentReply = (content) => {
-    const parsed = Agent.parseJSON(content);
-    if (parsed && typeof parsed === 'object' && (parsed.say != null || Array.isArray(parsed.options))) {
-      const options = Array.isArray(parsed.options)
-        ? parsed.options.filter((o) => o && o.label).slice(0, 3).map((o) => ({ label: String(o.label).trim(), desc: String(o.desc || '').trim() }))
-        : [];
-      return { role: 'agent', say: String(parsed.say || '').trim() || '(没拿到回复)', options };
-    }
-    return { role: 'agent', say: (content || '').trim() || '(没拿到回复)' };
-  };
-
-  // 发一条用户消息 → 追加用户气泡 → 带完整历史调智谱（快模型）→ 解析成结构化 agent 气泡
+  // 发一条用户消息 → 追加用户气泡 → 跑 Agent（工具循环 + 抽取选项）→ 追加结构化 agent 气泡
   const sendUser = async (text) => {
     const t = (text || '').trim();
     if (!t || loading) return;
@@ -247,10 +249,10 @@ export function AppAgent() {
     writeMessages(nextAfterUser);
     setLoading(true);
     try {
-      // json:true → 强制 JSON 模式（智谱 response_format），根治快模型吐坏 JSON 的问题；token 给足避免截断
-      const data = await Agent.complete(buildApiHistory(nextAfterUser), { model: Agent.CHAT_MODEL, json: true, temperature: 0.7, maxTokens: 1200 });
-      const content = (data.choices?.[0]?.message?.content || '').trim();
-      writeMessages([...Store.get().chat, parseAgentReply(content)]);
+      const reply = await Agent.runAgent(buildApiHistory(nextAfterUser), { model: Agent.CHAT_MODEL });
+      let options = reply.options || [];
+      if (!options.length) { const s = salvageOptions(reply.say); if (s) options = s.options; } // 本地正则兜底
+      writeMessages([...Store.get().chat, { role: 'agent', say: reply.say || '(没拿到回复)', options }]);
     } catch (err) {
       const msg = err && err.message === 'NO_KEY' ? '请先连接智谱 API Key' : (err && err.message) || '展开失败';
       writeMessages([...Store.get().chat, { role: 'agent', say: '抱歉，出错了：' + msg }]);
