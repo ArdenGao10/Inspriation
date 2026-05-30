@@ -110,7 +110,7 @@ function SynthSequence({ onDone, pending }) {
   const [cap, setCap] = React.useState(0);
   const [capVisible, setCapVisible] = React.useState(true);
   const [timelineDone, setTimelineDone] = React.useState(false);
-  const captions = ['收集素材 ✦', '寻找隐藏的关联点 ✦', '正在合成新灵感 ✦'];
+  const captions = ['收集素材中', '寻找隐藏的关联点', '正在合成新灵感'];
   React.useEffect(() => {
     const t = [];
     t.push(setTimeout(() => setPhase('think'), 950));

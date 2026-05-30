@@ -226,9 +226,19 @@
 
 ---
 
-## 待办（后续步骤）
+## 路线图（2026-05-31 重排 · 按用户确认的顺序逐个实现）
 
-- **P3** 对话页接真实多步 tool-use 循环（`propose_directions` / `expand_plan` / `search_cases` / `add_fragment`）。
-- **P4** 收藏 / 我的页全部读真实 store；灵感罐素材增删管理。
-- **P5** 社区（本地版）+「让 Agent 展开它 / 接力」跨页流转。
-- 部署 Vercel；接 Supabase（鉴权/数据库 + 藏 Key 的后端代理）；评估桌面端宽屏下的多列布局。
+> 起因：用户反馈来回切 Tab 状态丢失（灵感页合成中途切走会重置、对话切走回到初始态）。根因在 `App.jsx` 用 if/else 只挂载当前 Tab，切换即卸载 → 组件本地 state 全丢。借此重排了整体路线图。
+
+- **T1 · 跨页状态保留**（进行中）：四个 Tab 全部常驻挂载，用 CSS `display` 切换可见性，保留各页本地 state、滚动位置、在途请求。
+- **T2 · 对话持久化到 store**：把 `AppAgent.messages` 提到 store + localStorage，刷新页面 / 关闭重开也不丢对话。
+- **T3 · 社区接 store + 可交互**：feed 读真实数据（用户晒的成品 / 接力贴），点赞 / 评论数本地态，发帖 + 接力跨页流转打通。
+- **T4 · 「我的」页补全**：项目列表、灵感口味偏好做成真实可用（去掉 toast 占位 + 写死的 6/23 统计）。
+- **T5 · Agent 真实 tool-loop**：`propose_directions` / `expand_plan` / `search_cases` / `add_fragment` 多步工具循环。
+- **T6 · 后端 / 部署**：Supabase（auth + 数据库 + 藏 Key 的 Edge Function 代理）+ Vercel 部署；DB 接入前先有鉴权。
+
+### T1 实现记录
+- `App.jsx` 从「if/else 选一个 screen」改为「四个 Tab 全部渲染，外包一层 `TabPane` 用 `display:block/none` 切换」。
+- `TabPane`：`position:absolute; inset:0`，铺满 `.app-content`；非激活时 `display:none`（DOM 保留、state 不卸载）。
+- 效果：灵感页合成中途切到对话页再切回，结果还在；对话聊到一半切走再回来，消息历史 + 滚动位置都在。
+- 取舍：隐藏的 Tab 仍挂载（GlowField 动画仍在跑），4 个轻量页可接受；后续若有性能问题再按需暂停隐藏页动画。
