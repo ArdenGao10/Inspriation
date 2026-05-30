@@ -135,13 +135,18 @@ export function AppAgent() {
   const [messages, setMessages] = React.useState([]); // { role: 'user'|'agent', text: string }
   const [loading, setLoading] = React.useState(false);
   const scrollerRef = React.useRef(null);
+  // 已处理过的 idea 引用 —— StrictMode 双触发兜底：两次 setup 闭包里捕获的是同一个对象，
+  // 第二次进来时 ref 命中直接 return，不会再发一次。
+  const handledIdeaRef = React.useRef(null);
 
   // 监听 store.pendingIdea：来自首页的灵感 → 自动产生一轮对话。
   React.useEffect(() => {
     if (!pendingIdea) return;
+    if (handledIdeaRef.current === pendingIdea) return; // 同一个 idea 不会被处理两次
     // 没 Key 就让 KeyModal 接管，灵感原地保留（用户填完再切回来会自动跑）
     if (!Agent.ensureKey()) return;
-    // 同步抓取并清空，避免 StrictMode 双触发或后续重渲染重复发起
+    // 先打标记、再清 store，最后才追加消息 / 调 API —— 顺序很关键，确保任何重入都被挡掉
+    handledIdeaRef.current = pendingIdea;
     const idea = pendingIdea;
     Store.clearPendingIdea();
     const userText = `帮我展开这个灵感:${ideaTitle(idea)}`;

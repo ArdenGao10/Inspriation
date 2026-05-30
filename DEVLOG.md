@@ -112,6 +112,25 @@
 - `npm run build` 通过（42 模块,无新增报错）。
 - 三步分别提交 push：`store` → `JarHome` → `AppAgent`,每步独立可回滚。
 
+## 步骤 9 · 对话页修复重复发送 bug
+
+从首页「让 Agent 展开它」过来时，同一条灵感被发了两次给智谱 —— 用户气泡也重复了一条。
+
+### 根因
+- `useStore((s) => s.pendingIdea)` 订阅 store，组件 render 时 `pendingIdea` 闭包就被捕获了。
+- React.StrictMode 在 dev 下会让 `useEffect` 跑 **setup → cleanup → setup** 两轮，两次 setup 里捕获的都是同一个 `pendingIdea` 对象。
+- 之前的代码虽然在 effect 里同步 `Store.clearPendingIdea()`，但那只清掉了 store 状态，不影响第二次 setup 里闭包变量的值 —— 所以第二次 setup 照样把 `idea` 当成有效输入，发出第二条用户消息 + 第二次 API 调用。
+
+### 改动（`AppAgent.jsx`）
+- 新增 `handledIdeaRef = useRef(null)`：用 ref 记录"已经处理过的 idea 对象引用"。
+- effect 进来先比 `handledIdeaRef.current === pendingIdea`，命中直接 `return` —— StrictMode 第二次跑会被这一行挡掉。
+- 处理顺序：**先打标记 (`handledIdeaRef.current = pendingIdea`) → 再 `Store.clearPendingIdea()` → 最后才 `setMessages` / `Agent.complete`**。这样任何重入路径都会先撞到 ref 检查。
+- ref 而不是 state：刻意不触发重渲染，且 StrictMode 双触发之间 ref 是同一份。
+
+### 验证
+- `npm run build` 通过（42 模块）。
+- 实测从首页摇 → 让 Agent 展开它 → 对话页只追加一条用户气泡 + 一次智谱调用。
+
 ---
 
 ## 待办（后续步骤）
