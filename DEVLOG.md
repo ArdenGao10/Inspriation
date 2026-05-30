@@ -197,6 +197,35 @@
 
 ---
 
+## 步骤 9 · 对话页去样本化 + 方向卡可交互 + 头部光晕对齐
+
+> 目标：把对话页从"展示设计稿示例"变成真实产品对话框；方向选项从纯文本变成可点击卡片；修掉点击闪蓝、对齐头部光晕。
+
+### 方向选项 → 可点击卡片（`DirectionCards`）
+- 复用既有 `parseAgentBlocks`（识别 `方向A：xxx` 行）拿到 `{ key, label, desc }`，渲染成卡片：白底 `#FFFCF7`、`1px #E8DFD0` 描边、圆角 12、`padding 12px 16px`、`margin 8px 0`。
+- 布局：左侧金色序号圈（A/B/C，`#FBEFD6` 底 + 金字）· 中间描述 · 右侧 `→` 箭头。
+- hover（CSS `.gdir-card:not(.gdir-locked):hover`）：描边转金 `#D4943A`、底色 `rgba(212,148,58,0.05)`。
+- 选中：该卡 2px 金边 + 序号圈填金白字、箭头转金；其余卡 `opacity 0.5` 变灰。
+- 全组加 `gdir-locked` 类后不再响应 hover、`cursor:default`、`onClick` 早返回 —— 选过就锁定，防重复发送。点击仍走 `handlePickDirection` → 自动发"我选方向X：{描述}"。
+
+### 去掉示例对话 + 开场白
+- 删除 `StaticDemo`（会议录音示例那一整段）和 `hasConversation` 分支 —— 真实产品不再展示假对话。
+- 新增 `greetedRef` + effect：没有从首页带来 `pendingIdea` 时，Agent 先抛一句开场白「你今天有什么想聊的灵感吗？可以聊一聊。」（作为第一条 agent 气泡，也进 API 历史）。有 `pendingIdea` 则跳过、走原自动展开管线。
+
+### 交互：修掉点击闪蓝
+- `index.css`：全局 `*{-webkit-tap-highlight-color:transparent}`；`.gpress/.gdir-card/button/[role=button]` 加 `user-select:none`；`button:focus{outline:none}`。消除桌面点击时的蓝色文字选中遮罩 + 移动端点按高亮。
+
+### UI 对齐：头部光晕收束并对齐星星
+- 之前 `GlowField` 是 `position:absolute inset:0` 铺满整页，光点会飘到下方对话卡片旁边。
+- 改成把 `GlowField`（`r=170 / motes=6 / spread=0.7`）放进一个 `position:relative; overflow:hidden` 的头部格子里 —— 光点被裁切在头部、不再溢出到卡片旁。
+- 头部内容居中：新增一颗 `GlowDot`（size 30，自带闪烁 `gGlow` 光晕）当"灵感 Agent 的星星"，光晕中心 `y=30%` 正对这颗星 → 光晕 / 光点 / 星星三者对齐到 Agent 身份位。
+
+### 验证
+- `npm run build` 通过（42 模块，JS 194 KB / gzip 62.9 KB，CSS 3.78 KB）。
+- 开场白即时渲染（不需 Key）；方向卡 hover / 选中 / 锁定态正常；点击不再闪蓝；头部光晕居中对齐星星。
+
+---
+
 ## 待办（后续步骤）
 
 - **P3** 对话页接真实多步 tool-use 循环（`propose_directions` / `expand_plan` / `search_cases` / `add_fragment`）。

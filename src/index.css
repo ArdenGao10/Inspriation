@@ -38,6 +38,11 @@ html, body { margin: 0; height: 100%; background: #FDFBF4; font-family: "PingFan
 .gpress{transition:opacity .15s ease, transform .15s ease}
 .gpress:active{opacity:.6;transform:scale(.98)}
 
+/* 点击不再闪蓝：禁掉移动端点按高亮 + 桌面端点按时的文字选中蓝块 */
+*{-webkit-tap-highlight-color:transparent}
+.gpress,.gdir-card,button,[role="button"]{user-select:none;-webkit-user-select:none}
+button:focus,button:focus-visible{outline:none}
+
 /* —— jar-flow —— */
 @keyframes f2Mote { 0%{transform:translateY(0);opacity:0} 22%{opacity:1} 80%{opacity:1} 100%{transform:translateY(-28px);opacity:0} }
 @keyframes f2Twinkle { 0%,100%{opacity:.3} 50%{opacity:1} }
@@ -62,4 +67,5 @@ html, body { margin: 0; height: 100%; background: #FDFBF4; font-family: "PingFan
 
 /* —— agent chat —— */
 @keyframes typingDot { 0%,60%,100% { transform: translateY(0); opacity: .35 } 30% { transform: translateY(-5px); opacity: 1 } }
-.gdir-card:hover { background: rgba(212,148,58,0.05) !important; }
+/* 方向卡 hover：边框转金、底色微暖；已选/已锁定的卡不再响应 hover */
+.gdir-card:not(.gdir-locked):hover { border-color: #D4943A !important; background: rgba(212,148,58,0.05) !important; }

@@ -107,24 +107,30 @@ function parseAgentBlocks(text) {
   return blocks;
 }
 
+// 可点击的方向卡片：左侧金色序号圈 · 中间描述 · 右侧箭头。
+// 选中后该卡金色加粗描边，其余变灰；全组锁定不再可点（防重复发送）。
 function DirectionCards({ items, picked, onPick }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, margin: '8px 0' }}>
       {items.map((c, j) => {
         const on = picked === c.label;
         const dim = picked && !on;
         return (
-          <div key={j} className="gdir-card"
+          <div key={j} className={`gdir-card${picked ? ' gdir-locked' : ''}`}
             onClick={() => { if (!picked) onPick && onPick(c); }}
             style={{
-              background: '#fff', borderRadius: 12, padding: 14,
-              border: `${on ? 2 : 1}px solid ${G.gold}`,
+              display: 'flex', alignItems: 'center', gap: 12,
+              background: '#FFFCF7', borderRadius: 12, padding: '12px 16px',
+              border: `${on ? 2 : 1}px solid ${on ? G.gold : '#E8DFD0'}`,
               cursor: picked ? 'default' : 'pointer',
-              opacity: dim ? 0.55 : 1,
-              transition: 'background .15s ease, opacity .25s ease, border-width .15s ease',
+              opacity: dim ? 0.5 : 1,
+              transition: 'border-color .15s ease, background .15s ease, opacity .25s ease',
             }}>
-            <div style={{ fontSize: 13.5, fontWeight: 600, color: G.ink, marginBottom: 4 }}>{c.label}</div>
-            <div style={{ fontSize: 13, color: G.inkSoft, lineHeight: 1.55 }}>{c.desc}</div>
+            <span style={{ width: 26, height: 26, flex: '0 0 26px', borderRadius: '50%', display: 'grid', placeItems: 'center',
+              background: on ? G.gold : '#FBEFD6', color: on ? '#fff' : G.gold,
+              fontFamily: G.serif, fontWeight: 600, fontSize: 13.5, lineHeight: 1 }}>{c.key}</span>
+            <span style={{ flex: 1, fontSize: 13.5, color: G.ink, lineHeight: 1.5 }}>{c.desc}</span>
+            <GIcon name="arrow" size={16} color={on ? G.gold : G.inkFaint} sw={1.7} />
           </div>
         );
       })}
@@ -154,68 +160,6 @@ function AgentContent({ text, picked, onPick }) {
         }
         return null;
       })}
-    </>
-  );
-}
-
-// 设计稿里的静态对话样本：仅在 pendingIdea 为空且没有真实消息时展示。
-function StaticDemo() {
-  const [picked, setPicked] = React.useState(null);
-  const options = [
-    { t: '会议录音 → 待办清单', d: '录音结束自动生成任务' },
-    { t: '碎片时间 · 灵感速记本', d: '随手记,AI 帮你归类' },
-    { t: '把日历空隙变成专注块', d: '空闲自动排成深度工作' },
-  ];
-  return (
-    <>
-      <div style={{ alignSelf: 'center', fontSize: 11, color: G.inkFaint, padding: '3px 12px', borderRadius: 999, border: `1px solid ${G.hair2}` }}>今天 14:08</div>
-      <UserBubble>我想做个帮自己管理时间的小工具,但没什么头绪</UserBubble>
-      <AgentBubble>
-        <div style={{ marginBottom: 12 }}>从你罐子里的素材,我揉出了三个方向 —— 选一个我帮你展开成可落地方案:</div>
-        <div style={{ border: `1px solid ${G.hair}`, borderRadius: 13, overflow: 'hidden', background: G.bgWarm }}>
-          <div style={{ padding: '8px 13px', fontSize: 11, color: G.gold, letterSpacing: 1, borderBottom: `1px solid ${G.hair2}`, fontWeight: 600 }}>请选择一个方向</div>
-          {options.map((o, i) => {
-            const on = picked === i;
-            return (
-              <div key={i} className="gpress" onClick={() => setPicked(i)} style={{ display: 'flex', alignItems: 'center', gap: 11,
-                padding: '12px 13px', cursor: 'pointer', borderTop: i ? `1px solid ${G.hair2}` : 'none',
-                background: on ? 'rgba(255,243,210,0.7)' : 'transparent' }}>
-                <span style={{ width: 18, height: 18, borderRadius: '50%', flex: '0 0 18px', display: 'grid', placeItems: 'center',
-                  border: `1.5px solid ${on ? G.gold : 'rgba(120,95,40,0.28)'}`, background: on ? G.gold : 'transparent' }}>
-                  {on && <GIcon name="check" size={11} color="#fff" sw={2.4} />}
-                </span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 600, color: G.ink }}>{o.t}</div>
-                  <div style={{ fontSize: 11.5, color: G.inkFaint, marginTop: 2 }}>{o.d}</div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        {picked != null && (
-          <div className="gpress" style={{ marginTop: 11, display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: G.serif,
-            fontSize: 14, color: G.ink, borderBottom: `1.5px solid ${G.gold}`, paddingBottom: 3, cursor: 'pointer' }}>
-            展开「{options[picked].t.split(' ')[0]}」 <GIcon name="arrow" size={14} color={G.gold} />
-          </div>
-        )}
-      </AgentBubble>
-      <UserBubble>就第一个吧,帮我拆一下要做什么</UserBubble>
-      <AgentBubble>
-        <div style={{ fontWeight: 600, marginBottom: 8 }}>会议录音 → 待办清单 · MVP 拆解</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-          {['录音上传 / 实时转写', '识别「谁·做什么·截止」', '一键写入日历 & 提醒'].map((s, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 13.5, color: G.inkSoft }}>
-              <span style={{ fontFamily: G.serif, fontStyle: 'italic', color: G.gold, fontSize: 13, width: 14 }}>{i + 1}</span>{s}
-            </div>
-          ))}
-        </div>
-        <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-          {['给技术栈', '画原型', '收藏进罐'].map((t, i) => (
-            <span key={i} className="gpress" style={{ padding: '6px 12px', borderRadius: 999, border: `1px solid ${G.hair}`,
-              fontSize: 11.5, color: G.inkSoft, background: '#fff', cursor: 'pointer' }}>{t}</span>
-          ))}
-        </div>
-      </AgentBubble>
     </>
   );
 }
@@ -307,6 +251,14 @@ export function AppAgent() {
     sendUser(t);
   };
 
+  // 没有从首页带来灵感时，Agent 先抛一句开场白（真实产品，不再展示示例对话）
+  const greetedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (greetedRef.current || pendingIdea) return;
+    greetedRef.current = true;
+    writeMessages([{ role: 'agent', text: '你今天有什么想聊的灵感吗？可以聊一聊。' }]);
+  }, [pendingIdea]);
+
   // 监听 store.pendingIdea：来自首页的灵感 → 自动产生第一轮对话
   React.useEffect(() => {
     if (!pendingIdea) return;
@@ -324,33 +276,30 @@ export function AppAgent() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages, loading]);
 
-  const hasConversation = messages.length > 0 || loading;
   const canSend = draft.trim().length > 0 && !loading;
 
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
-      <GlowField x="50%" y="14%" r={260} intensity={0.5} motes={9} spread={1.1} />
-      <div style={{ position: 'relative', zIndex: 2, textAlign: 'center', padding: '6px 22px 12px' }}>
-        <div style={{ fontFamily: G.serif, fontSize: 18, color: G.ink, letterSpacing: 0.4 }}>灵感 Agent</div>
-        <div style={{ fontSize: 11.5, color: G.inkFaint, marginTop: 3, letterSpacing: 0.4 }}>把一句话,聊成一个方案</div>
+      {/* 头部：光晕收束在这一格内，正中对齐 Agent 那颗闪烁星星，避免光点飘到下方卡片旁边 */}
+      <div style={{ position: 'relative', overflow: 'hidden', zIndex: 2, padding: '14px 22px 14px' }}>
+        <GlowField x="50%" y="30%" r={170} intensity={0.5} motes={6} spread={0.7} />
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+          <GlowDot size={30} />
+          <div style={{ fontFamily: G.serif, fontSize: 18, color: G.ink, letterSpacing: 0.4 }}>灵感 Agent</div>
+          <div style={{ fontSize: 11.5, color: G.inkFaint, letterSpacing: 0.4 }}>把一句话,聊成一个方案</div>
+        </div>
       </div>
       <div ref={scrollerRef} className="glow-scroll" style={{ position: 'relative', zIndex: 2, flex: 1, minHeight: 0, overflowY: 'auto',
         padding: '4px 20px 12px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {hasConversation ? (
-          <>
-            {messages.map((m, i) => (
-              m.role === 'user'
-                ? <UserBubble key={i}>{m.text}</UserBubble>
-                : <AgentBubble key={i}>
-                    <AgentContent text={m.text} picked={m.picked}
-                      onPick={(c) => handlePickDirection(i, c)} />
-                  </AgentBubble>
-            ))}
-            {loading && <AgentBubble><TypingDots /></AgentBubble>}
-          </>
-        ) : (
-          <StaticDemo />
-        )}
+        {messages.map((m, i) => (
+          m.role === 'user'
+            ? <UserBubble key={i}>{m.text}</UserBubble>
+            : <AgentBubble key={i}>
+                <AgentContent text={m.text} picked={m.picked}
+                  onPick={(c) => handlePickDirection(i, c)} />
+              </AgentBubble>
+        ))}
+        {loading && <AgentBubble><TypingDots /></AgentBubble>}
       </div>
       <div style={{ position: 'relative', zIndex: 3, padding: '8px 20px 14px',
         background: 'linear-gradient(to top, rgba(253,251,244,0.97) 60%, rgba(253,251,244,0))' }}>
