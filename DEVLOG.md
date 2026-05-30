@@ -265,3 +265,33 @@
   - 新增「新对话」入口（头部右上角，仅 `messages.length > 1` 时显示）：`clearChat()` 把对话重置成只剩一条 `GREETING`，loading 中禁用。
 - 效果：对话聊到一半刷新页面 / 关掉浏览器重开，历史和方向卡选中态都还在；需要重来点「新对话」即可。
 - `npm run build` 通过（42 模块，JS 194.7 KB / gzip 63.0 KB）。
+
+---
+
+## 步骤 14 · Agent 对话改「结构化选项」+ 换快模型提速
+
+> 回应用户反馈：之前删掉示例后，对话退化成纯文字、方向卡几乎不出现——因为它靠正则从模型的自由文本里抠「方向A：」，而模型经常不照这个格式写，正则一匹配失败就只剩纯文字。这一步把交互从「文本约定」改成「结构化输出」，并给对话换上快模型。
+
+### 根因
+- 旧设计让 system prompt 求模型严格输出「方向A：xxx」文本行，前端用 `parseAgentBlocks` 正则解析成卡片。
+- 模型（尤其口语化回复时）不稳定守这个格式 → 正则抠不到 → 选项卡不渲染，只剩一坨文字。**靠文本约定做交互本质不可靠**。
+
+### 改成结构化输出（`AppAgent.jsx`）
+- 新 system prompt 要求每轮只输出一个 JSON：`{"say":"要说的话","options":[{"label","desc"}]}`，options 0–3 个、不需要选择时给 `[]`。
+- agent 消息结构从 `{text}` 升级为 `{say, options, picked}`；渲染 / 历史回传 / 持久化都兼容旧的 `{text}`（`m.say ?? m.text` 兜底）。
+- 新增 `parseAgentReply(content)`：用 `Agent.parseJSON` 解析（能吃下模型给 JSON 套的代码围栏）；解析失败就整段当纯文字兜底，绝不让交互崩。
+- `AgentContent` 的选项卡不再从文字正则抠，改由结构化 `options` 字段驱动 → **一定能渲染**；文字里偶发的「方向X」行直接忽略，避免重复。
+- 选项卡显示「短标题 + 一句话说明」两层；点击发送「我选「{label}」：{desc}」并锁定整组（防重复发送，沿用 `gdir-locked`）。
+- `buildApiHistory` 回传 agent 的纯文字 `say`（不回传 options 的 JSON），省 token、模型也更清楚。
+
+### 换快模型提速（`agent.js`）
+- 新增 `CHAT_MODEL`（默认 `glm-4-flash`，可用 `VITE_ZHIPU_CHAT_MODEL` 覆盖成 glm-4.5-air 等）；`complete()` 支持 `model` 覆盖。
+- 对话轮用 `CHAT_MODEL`，首页摇一摇合成仍用 `glm-4.6` 保质量。
+
+### 验证
+- `npm run build` 通过；真实调一次 glm-4-flash：status 200、**3.66s**（比 glm-4.6 的十几秒明显快）、返回合法 `{say, options×3}`（带代码围栏，`Agent.parseJSON` 能解析）。本地确认解析路径 OK。
+
+### 还没做（边界说清楚）
+- 这是「结构化对话 + 可点选项」，但仍是单轮 chat completion，**还不是真正的多步 tool-loop**（模型自主调 `search_cases` / `add_fragment` 等）—— 那是 **T5**。
+- 「找类似产品」目前只是模型凭记忆说，没接联网搜索（`web_search` 工具）—— 也在 T5。
+- 读真实业务数据库来生成更好灵感 —— 是 **T6**（Supabase + 鉴权 + 后端 Key 代理）。

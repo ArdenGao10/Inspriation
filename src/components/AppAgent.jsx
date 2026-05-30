@@ -129,7 +129,10 @@ function DirectionCards({ items, picked, onPick }) {
             <span style={{ width: 26, height: 26, flex: '0 0 26px', borderRadius: '50%', display: 'grid', placeItems: 'center',
               background: on ? G.gold : '#FBEFD6', color: on ? '#fff' : G.gold,
               fontFamily: G.serif, fontWeight: 600, fontSize: 13.5, lineHeight: 1 }}>{c.key}</span>
-            <span style={{ flex: 1, fontSize: 13.5, color: G.ink, lineHeight: 1.5 }}>{c.desc}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 600, color: G.ink, lineHeight: 1.4 }}>{c.label}</div>
+              {c.desc && <div style={{ fontSize: 12.5, color: G.inkSoft, lineHeight: 1.45, marginTop: 2 }}>{c.desc}</div>}
+            </div>
             <GIcon name="arrow" size={16} color={on ? G.gold : G.inkFaint} sw={1.7} />
           </div>
         );
@@ -138,8 +141,15 @@ function DirectionCards({ items, picked, onPick }) {
   );
 }
 
-function AgentContent({ text, picked, onPick }) {
+// 渲染一条 agent 气泡：say 文字（段落 / 列表）+ 由 options 驱动的可点选项卡。
+// 选项不再靠正则从文字里抠，而是模型结构化返回的 options 字段，所以一定能渲染出来。
+function AgentContent({ text, options, picked, onPick }) {
   const blocks = React.useMemo(() => parseAgentBlocks(text), [text]);
+  const cards = React.useMemo(() => (
+    Array.isArray(options) && options.length
+      ? options.map((o, i) => ({ key: String.fromCharCode(65 + i), label: o.label, desc: o.desc }))
+      : null
+  ), [options]);
   return (
     <>
       {blocks.map((b, i) => {
@@ -155,11 +165,10 @@ function AgentContent({ text, picked, onPick }) {
             </ul>
           );
         }
-        if (b.type === 'cards') {
-          return <DirectionCards key={i} items={b.items} picked={picked} onPick={onPick} />;
-        }
+        // 文字里若混进了「方向X」行（模型偶发不守约定），忽略它——选项统一走 options 卡片，避免重复
         return null;
       })}
+      {cards && <DirectionCards items={cards} picked={picked} onPick={onPick} />}
     </>
   );
 }
@@ -175,25 +184,24 @@ function buildInitialUserMessage(idea) {
     : `帮我展开这个灵感：${title}`;
 }
 
-// 共创式对话的 system prompt。约定方向行格式 → 前端可解析成卡片。
-const SYS_PROMPT = `你是灵感 Agent，一个有经验的产品伙伴。用户从灵感罐里碰撞出了一个 idea，想和你一起一步步把它聊成可落地的方案。
+// 共创式对话的 system prompt。要求严格 JSON 输出 → 前端确定性渲染「说的话 + 可点选项卡」。
+const SYS_PROMPT = `你是「灵感 Agent」，一个有经验的产品搭子。和用户一步步把一个 idea 聊成能落地的方案。
 
-【核心原则】
-- 你是共创伙伴，不是方案生成器
-- 每次回复都简短：首轮不超过 150 字，展开轮不超过 200 字
-- 一轮只推进一小步，给用户 2-3 个选择，等用户选了再继续
-- 不要一次性给完整方案
-- 用口语化的中文，像朋友聊天；不要用 markdown 语法，不要加粗
+【原则】
+- 共创伙伴，不是方案生成器。每轮只推进一小步，简短（say 不超过 150 字）。
+- 口语化中文，像朋友聊天。不要 markdown、不要加粗。
+- 多数时候给用户 2-3 个「可点的选项」，等他选了再继续；不要一次倒完整方案。
 
 【对话节奏】
-- 首轮：用一句话表达你对这个 idea 的理解（带点趣味），然后给出 2-3 个可以深入的方向，最后一句问"挑哪个方向展开？"
-- 用户选方向后：用 2-3 句说清这个方向的核心玩法，再加 1 句说目标用户是谁，最后问"要我帮你拆解 MVP 吗？还是搜搜有没有类似产品？"
-- 后续：用户说"拆解 MVP"就列 3-5 步可执行的行动；说"搜类似产品"就给几个相关产品对比；问别的就正常简短聊。
+- 开场 / 拿到 idea：一句话说你的理解（带点趣味），然后给 2-3 个可深入的方向当 options。
+- 用户选了某个方向：2-3 句说清核心玩法 + 1 句目标用户，再给 options，比如「拆解 MVP」「找类似产品」「换个方向」。
+- 拆 MVP：say 里列 3-5 步行动（每步单独一行，行首用「· 」），可再给 options「给技术栈」「画原型」「收藏进罐」。
 
-【格式约定 · 必须严格遵守】
-- 只在"首轮"给方向选项；展开轮、后续轮不要再用方向格式
-- 给方向选项时，每个方向必须单独占一行，行首严格用「方向A：」「方向B：」「方向C：」开头（中文冒号），后面接一句话描述
-- 前端会把这些行渲染成可点击的卡片，所以不要换别的写法、不要在前后加序号、不要加粗`;
+【输出格式 · 必须严格遵守】
+只输出一个 JSON 对象，不要任何额外文字、不要代码围栏、不要 markdown：
+{"say":"要对用户说的话","options":[{"label":"选项短标题(不超过12字)","desc":"一句话说明(不超过20字)"}]}
+- options 是给用户点击的选项，0-3 个；当前不需要让用户选择时给 []（空数组）。
+- say 里不要重复 options 的内容，也不要写「方向A」「1.」这种编号——选项由 options 字段单独给。`;
 
 // 无灵感进来时的开场白（也用于「新对话」重置）
 const GREETING = '你今天有什么想聊的灵感吗？可以聊一聊。';
@@ -211,13 +219,30 @@ export function AppAgent() {
   // 写消息：直接落到 store（同步更新 state + 写 localStorage）。读最新值用 Store.get().chat。
   const writeMessages = (next) => Store.setChat(next);
 
-  // 把当前对话历史转成智谱 API 的 messages 数组（system + user/assistant 轮替）
+  // 把当前对话历史转成智谱 API 的 messages 数组（system + user/assistant 轮替）。
+  // agent 消息回传纯文字（say），不回传 options 的 JSON —— 省 token、模型也更清楚。
   const buildApiHistory = (msgs) => [
     { role: 'system', content: SYS_PROMPT },
-    ...msgs.map((m) => ({ role: m.role === 'agent' ? 'assistant' : 'user', content: m.text })),
+    ...msgs.map((m) => ({
+      role: m.role === 'agent' ? 'assistant' : 'user',
+      content: m.role === 'agent' ? (m.say ?? m.text ?? '') : m.text,
+    })),
   ];
 
-  // 发一条用户消息 → 追加用户气泡 → 带完整历史调智谱 → 追加 agent 气泡
+  // 把模型返回的 content 解析成结构化 agent 消息 { say, options }。
+  // 解析失败（模型没按 JSON 输出）就整段当纯文字兜底，绝不让交互崩掉。
+  const parseAgentReply = (content) => {
+    const parsed = Agent.parseJSON(content);
+    if (parsed && typeof parsed === 'object' && (parsed.say != null || Array.isArray(parsed.options))) {
+      const options = Array.isArray(parsed.options)
+        ? parsed.options.filter((o) => o && o.label).slice(0, 3).map((o) => ({ label: String(o.label).trim(), desc: String(o.desc || '').trim() }))
+        : [];
+      return { role: 'agent', say: String(parsed.say || '').trim() || '(没拿到回复)', options };
+    }
+    return { role: 'agent', say: (content || '').trim() || '(没拿到回复)' };
+  };
+
+  // 发一条用户消息 → 追加用户气泡 → 带完整历史调智谱（快模型）→ 解析成结构化 agent 气泡
   const sendUser = async (text) => {
     const t = (text || '').trim();
     if (!t || loading) return;
@@ -226,22 +251,22 @@ export function AppAgent() {
     writeMessages(nextAfterUser);
     setLoading(true);
     try {
-      const data = await Agent.complete(buildApiHistory(nextAfterUser), { temperature: 0.85, maxTokens: 700 });
-      const reply = (data.choices?.[0]?.message?.content || '').trim() || '(没拿到回复)';
-      writeMessages([...Store.get().chat, { role: 'agent', text: reply }]);
+      const data = await Agent.complete(buildApiHistory(nextAfterUser), { model: Agent.CHAT_MODEL, temperature: 0.8, maxTokens: 600 });
+      const content = (data.choices?.[0]?.message?.content || '').trim();
+      writeMessages([...Store.get().chat, parseAgentReply(content)]);
     } catch (err) {
       const msg = err && err.message === 'NO_KEY' ? '请先连接智谱 API Key' : (err && err.message) || '展开失败';
-      writeMessages([...Store.get().chat, { role: 'agent', text: '抱歉，出错了：' + msg }]);
+      writeMessages([...Store.get().chat, { role: 'agent', say: '抱歉，出错了：' + msg }]);
     } finally {
       setLoading(false);
     }
   };
 
-  // 方向卡片点击 → 给当前 agent 气泡打 picked 标记 + 自动发一条用户消息
+  // 选项卡点击 → 给当前 agent 气泡打 picked 标记 + 自动发一条用户消息
   const handlePickDirection = (msgIndex, choice) => {
     const updated = Store.get().chat.map((mm, ii) => ii === msgIndex ? { ...mm, picked: choice.label } : mm);
     writeMessages(updated);
-    sendUser(`我选${choice.label}：${choice.desc}`);
+    sendUser(choice.desc ? `我选「${choice.label}」：${choice.desc}` : `我选「${choice.label}」`);
   };
 
   const submitDraft = () => {
@@ -254,7 +279,7 @@ export function AppAgent() {
   // 清空对话 → 重置成只有开场白的初始态
   const clearChat = () => {
     if (loading) return;
-    writeMessages([{ role: 'agent', text: GREETING }]);
+    writeMessages([{ role: 'agent', say: GREETING }]);
     setDraft('');
   };
 
@@ -263,7 +288,7 @@ export function AppAgent() {
   React.useEffect(() => {
     if (pendingIdea) return;
     if (Store.get().chat.length > 0) return;
-    writeMessages([{ role: 'agent', text: GREETING }]);
+    writeMessages([{ role: 'agent', say: GREETING }]);
   }, [pendingIdea]);
 
   // 监听 store.pendingIdea：来自首页的灵感 → 自动产生第一轮对话
@@ -307,7 +332,7 @@ export function AppAgent() {
           m.role === 'user'
             ? <UserBubble key={i}>{m.text}</UserBubble>
             : <AgentBubble key={i}>
-                <AgentContent text={m.text} picked={m.picked}
+                <AgentContent text={m.say ?? m.text} options={m.options} picked={m.picked}
                   onPick={(c) => handlePickDirection(i, c)} />
               </AgentBubble>
         ))}

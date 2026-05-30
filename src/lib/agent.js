@@ -4,7 +4,10 @@
 import { Store } from '../store.js';
 
 const API_BASE = 'https://open.bigmodel.cn/api/paas/v4';
+// 合成用强模型（质量优先）；对话用快模型（体感优先，glm-4-flash 又快又便宜）。
+// 想换更强的对话模型可设 VITE_ZHIPU_CHAT_MODEL=glm-4.5-air 之类。
 const MODEL = import.meta.env.VITE_ZHIPU_MODEL || 'glm-4.6';
+const CHAT_MODEL = import.meta.env.VITE_ZHIPU_CHAT_MODEL || 'glm-4-flash';
 
 // 灵感合成时叠加的「约束维度」，制造意想不到的碰撞
 export const CONSTRAINTS = {
@@ -32,10 +35,10 @@ export function ensureKey() {
   return false;
 }
 
-async function complete(messages, { json = false, tools, temperature = 0.85, maxTokens = 1200 } = {}) {
+async function complete(messages, { json = false, tools, temperature = 0.85, maxTokens = 1200, model = MODEL } = {}) {
   const key = getKey();
   if (!key) throw new Error('NO_KEY');
-  const payload = { model: MODEL, temperature, max_tokens: maxTokens, messages };
+  const payload = { model, temperature, max_tokens: maxTokens, messages };
   if (json) payload.response_format = { type: 'json_object' };
   if (tools) { payload.tools = tools; payload.tool_choice = 'auto'; }
   const res = await fetch(API_BASE + '/chat/completions', {
@@ -82,4 +85,4 @@ export async function synthesize() {
   };
 }
 
-export const Agent = { API_BASE, MODEL, CONSTRAINTS, getKey, ensureKey, complete, parseJSON, synthesize, pickRandom };
+export const Agent = { API_BASE, MODEL, CHAT_MODEL, CONSTRAINTS, getKey, ensureKey, complete, parseJSON, synthesize, pickRandom };

@@ -28,48 +28,56 @@ export function ChubbyJar({ shaking = false, fading = false }) {
   return (
     <div style={{ position: 'relative', width: W, height: H, opacity: fading ? 0 : 1, transition: 'opacity .4s ease',
       animation: shaking ? 'f2Shake 0.8s ease-in-out' : 'none', transformOrigin: '50% 82%' }}>
-      <div style={{ position: 'absolute', left: '50%', top: '60%', width: 210, height: 210, transform: 'translate(-50%,-50%)',
-        background: 'radial-gradient(circle, rgba(255,224,134,0.5), rgba(255,224,134,0) 68%)', filter: 'blur(15px)' }} />
+      <div style={{ position: 'absolute', left: '50%', top: '60%', width: 214, height: 214, transform: 'translate(-50%,-50%)',
+        background: 'radial-gradient(circle, rgba(255,225,142,0.42), rgba(255,225,142,0) 68%)', filter: 'blur(16px)' }} />
       {/* knob */}
-      <div style={{ position: 'absolute', top: 6, left: '50%', transform: 'translateX(-50%)', width: 42, height: 17, zIndex: 6,
-        borderRadius: '11px 11px 7px 7px',
-        background: 'radial-gradient(130% 130% at 38% 26%, #FFFAEE, #F3E2B4 72%, #E6CD92)',
-        boxShadow: 'inset 0 2px 2.5px rgba(255,255,255,0.85), inset 0 -2px 4px rgba(200,160,80,0.28), 0 2px 4px rgba(170,130,50,0.22)' }} />
+      <div style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', width: 40, height: 16, zIndex: 6,
+        borderRadius: '11px 11px 6px 6px',
+        background: 'radial-gradient(130% 130% at 38% 26%, rgba(255,252,241,0.96), rgba(245,226,184,0.9) 72%, rgba(229,203,142,0.86))',
+        boxShadow: 'inset 0 2px 2.5px rgba(255,255,255,0.8), inset 0 -2px 4px rgba(200,160,80,0.2), 0 2px 4px rgba(170,130,50,0.16)' }} />
       {/* stopper dome */}
-      <div style={{ position: 'absolute', top: 20, left: '50%', transform: 'translateX(-50%)', width: 104, height: 34, zIndex: 5,
+      <div style={{ position: 'absolute', top: 22, left: '50%', transform: 'translateX(-50%)', width: 100, height: 31, zIndex: 5,
         borderRadius: '17px 17px 8px 8px', overflow: 'hidden',
-        background: 'radial-gradient(130% 150% at 36% 22%, rgba(255,251,236,0.95), rgba(247,229,186,0.9) 56%, rgba(232,207,150,0.9))',
-        boxShadow: 'inset 9px 7px 14px rgba(255,255,255,0.6), inset -11px -8px 16px rgba(205,165,80,0.32), 0 4px 9px rgba(175,135,55,0.22)' }}>
-        <div style={{ position: 'absolute', top: 6, left: 18, width: 12, height: 18, borderRadius: 10, background: 'linear-gradient(180deg, rgba(255,255,255,0.85), transparent)', filter: 'blur(0.6px)' }} />
+        background: 'radial-gradient(130% 150% at 36% 22%, rgba(255,251,236,0.92), rgba(247,229,186,0.82) 56%, rgba(232,207,150,0.84))',
+        boxShadow: 'inset 8px 6px 12px rgba(255,255,255,0.48), inset -10px -8px 14px rgba(205,165,80,0.24), 0 4px 9px rgba(175,135,55,0.15)' }}>
+        <div style={{ position: 'absolute', top: 6, left: 18, width: 11, height: 17, borderRadius: 10, background: 'linear-gradient(180deg, rgba(255,255,255,0.68), transparent)', filter: 'blur(0.7px)' }} />
       </div>
       {/* mouth rim */}
-      <div style={{ position: 'absolute', top: 50, left: '50%', transform: 'translateX(-50%)', width: 138, height: 17, zIndex: 4,
+      <div style={{ position: 'absolute', top: 52, left: '50%', transform: 'translateX(-50%)', width: 132, height: 15, zIndex: 4,
         borderRadius: '8px 8px 6px 6px',
-        background: 'linear-gradient(180deg, rgba(255,252,242,0.95), rgba(238,214,158,0.86))',
-        boxShadow: 'inset 0 2px 3px rgba(255,255,255,0.82), inset 0 -3px 6px rgba(205,165,80,0.28), 0 3px 7px rgba(175,135,55,0.2)' }} />
+        background: 'linear-gradient(180deg, rgba(255,254,248,0.92), rgba(239,217,161,0.74))',
+        boxShadow: 'inset 0 2px 3px rgba(255,255,255,0.78), inset 0 -3px 6px rgba(205,165,80,0.2), 0 3px 7px rgba(175,135,55,0.13), 0 0 0 1px rgba(255,255,255,0.32)' }} />
       {/* body */}
-      <div style={{ position: 'absolute', top: 62, left: '50%', transform: 'translateX(-50%)', width: W, height: H - 70, zIndex: 3,
-        borderRadius: '34px 34px 56px 56px', overflow: 'hidden', backdropFilter: 'blur(1px)',
-        background: 'radial-gradient(125% 105% at 36% 22%, rgba(255,255,255,0.7), rgba(255,251,238,0.42) 32%, rgba(255,235,176,0.32) 64%, rgba(248,222,150,0.44) 100%)',
+      <div style={{ position: 'absolute', top: 63, left: '50%', transform: 'translateX(-50%)', width: 218, height: H - 72, zIndex: 3,
+        borderRadius: '42px 42px 64px 64px / 34px 34px 58px 58px', overflow: 'hidden', backdropFilter: 'blur(2.2px)', WebkitBackdropFilter: 'blur(2.2px)',
+        background: [
+          'linear-gradient(118deg, rgba(255,255,255,0.48) 0%, rgba(255,255,255,0.12) 30%, rgba(203,235,238,0.09) 47%, rgba(255,244,207,0.18) 74%, rgba(249,226,164,0.28) 100%)',
+          'radial-gradient(125% 105% at 36% 22%, rgba(255,255,255,0.6), rgba(255,251,238,0.32) 34%, rgba(255,235,176,0.24) 64%, rgba(248,222,150,0.34) 100%)',
+        ].join(', '),
         boxShadow: [
-          'inset 20px 18px 34px rgba(255,255,255,0.55)',
-          'inset -24px -20px 44px rgba(210,165,70,0.30)',
-          'inset 0 -16px 38px rgba(255,222,132,0.42)',
-          '0 24px 50px rgba(195,150,55,0.20)',
-          '0 0 0 1px rgba(190,150,70,0.16)',
+          'inset 19px 17px 31px rgba(255,255,255,0.46)',
+          'inset -22px -19px 38px rgba(210,165,70,0.22)',
+          'inset 0 -15px 34px rgba(255,222,132,0.34)',
+          'inset 0 0 0 1px rgba(255,255,255,0.45)',
+          '0 24px 48px rgba(195,150,55,0.16)',
+          '0 0 0 1px rgba(128,174,178,0.1)',
         ].join(', ') }}>
         <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '46%',
-          background: 'radial-gradient(118% 84% at 50% 124%, rgba(255,224,134,0.68), rgba(255,234,168,0.15) 56%, transparent 74%)' }} />
+          background: 'radial-gradient(118% 84% at 50% 124%, rgba(255,224,134,0.55), rgba(255,234,168,0.13) 56%, transparent 74%)' }} />
+        <div style={{ position: 'absolute', inset: 0, borderRadius: '42px 42px 64px 64px / 34px 34px 58px 58px',
+          boxShadow: 'inset 1px 0 0 rgba(255,255,255,0.46), inset -1px 0 0 rgba(117,183,190,0.12), inset 0 1px 0 rgba(255,255,255,0.34)' }} />
         <F2Motes n={13} energized={shaking} />
-        <div style={{ position: 'absolute', top: 22, left: 26, width: 60, height: 150, borderRadius: '50%', transform: 'rotate(16deg)',
-          background: 'radial-gradient(closest-side, rgba(255,255,255,0.68), rgba(255,255,255,0) 72%)', filter: 'blur(5px)' }} />
-        <div style={{ position: 'absolute', top: 36, right: 18, width: 14, height: 170, borderRadius: '50%', transform: 'rotate(-6deg)',
-          background: 'linear-gradient(180deg, rgba(255,255,255,0.46), rgba(255,255,255,0) 82%)', filter: 'blur(3px)' }} />
+        <div style={{ position: 'absolute', top: 22, left: 28, width: 50, height: 142, borderRadius: '50%', transform: 'rotate(16deg)',
+          background: 'radial-gradient(closest-side, rgba(255,255,255,0.5), rgba(255,255,255,0) 72%)', filter: 'blur(5px)' }} />
+        <div style={{ position: 'absolute', top: 39, right: 20, width: 11, height: 162, borderRadius: '50%', transform: 'rotate(-5deg)',
+          background: 'linear-gradient(180deg, rgba(231,251,255,0.28), rgba(255,255,255,0.11) 52%, rgba(255,255,255,0) 84%)', filter: 'blur(2.6px)' }} />
+        <div style={{ position: 'absolute', top: 58, left: 18, width: 8, height: 112, borderRadius: '50%', transform: 'rotate(7deg)',
+          background: 'linear-gradient(180deg, rgba(198,236,240,0.22), rgba(255,255,255,0) 78%)', filter: 'blur(2.8px)' }} />
         <div style={{ position: 'absolute', bottom: 24, left: 24, width: 48, height: 38, borderRadius: '50%',
-          background: 'radial-gradient(closest-side, rgba(255,240,190,0.48), transparent 72%)', filter: 'blur(5px)' }} />
+          background: 'radial-gradient(closest-side, rgba(255,240,190,0.4), transparent 72%)', filter: 'blur(5px)' }} />
       </div>
       <div style={{ position: 'absolute', bottom: -4, left: '50%', transform: 'translateX(-50%)', width: 164, height: 22, borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(255,218,116,0.32), transparent 70%)', filter: 'blur(7px)' }} />
+        background: 'radial-gradient(circle, rgba(255,218,116,0.28), transparent 70%)', filter: 'blur(8px)' }} />
     </div>
   );
 }
