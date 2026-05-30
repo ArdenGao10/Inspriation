@@ -56,16 +56,6 @@ npm run build   # 产出 dist/，可直接部署 Vercel
 npm run preview # 本地预览构建产物
 ```
 
-### 关于 API Key 与 `.env`
-
-- `.env` 里的 `VITE_ZHIPU_KEY` 在**构建/开发时**注入，本地开发最方便，且 `.env` 已被 `.gitignore` 忽略。
-- ⚠️ `VITE_` 变量会被打进**前端 bundle**，最终用户仍可见 —— `.env` 解决的是"不进 git / 本地方便"，**不等于把 Key 藏住**。
-- 生产环境真正藏 Key：接 Supabase 时把智谱调用搬到 **Edge Function / Vercel serverless**，Key 只放服务端环境变量，前端只调自己的后端。
-
-## 这算 Agent 吗？
-
-- **灵感罐摇一摇**：单次结构化生成（生成器性质）。
-- **对话页（规划中的完整形态）**：是标准 **LLM Agent** —— 具备「感知 → 推理 → 自主选工具 → 执行 → 观察 → 再决策」的多步 tool-use 循环（`propose_directions` / `expand_plan` / `search_cases` / `add_fragment`）。用 `glm-4.6` 正是看重它多步 function-calling 的稳定性。
 
 ## 功能进度
 
@@ -78,7 +68,3 @@ npm run preview # 本地预览构建产物
 - [ ] 部署 Vercel + 接入 Supabase（含藏 Key 的后端代理）
 
 详细的逐步改动记录见 [DEVLOG.md](DEVLOG.md)。
-
----
-
-> 设计稿来源：Claude Design 导出的「灵感搜集器 App.html」handoff bundle。旧版 MVP「灵感骰子」备份在 `.index.dice-backup.html`（git 忽略，仅本地保留）。
