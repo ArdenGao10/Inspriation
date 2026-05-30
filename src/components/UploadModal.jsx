@@ -35,8 +35,8 @@ export function UploadModal() {
 
   return (
     <div onClick={close} style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'grid', placeItems: 'center',
-      background: 'rgba(46,42,32,0.34)', backdropFilter: 'blur(3px)', padding: 20 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 440, background: '#FFFDF7', borderRadius: 22,
+      background: 'rgba(46,42,32,0.34)', backdropFilter: 'blur(3px)', padding: 32 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 380, background: '#FFFDF7', borderRadius: 22,
         padding: '24px 22px', boxShadow: '0 28px 70px rgba(120,90,30,0.3)', fontFamily: G.sans }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
           <div style={{ fontFamily: G.serif, fontSize: 21, color: G.ink }}>添加素材进灵感罐</div>
@@ -47,7 +47,7 @@ export function UploadModal() {
         </div>
 
         <textarea value={text} onChange={(e) => setText(e.target.value)} rows={5} autoFocus
-          placeholder={'例如：\n刷到一个很妙的本地咖啡地图\nhttps://example.com/某篇文章\n想给爸妈做个用药提醒'}
+          placeholder={'例如：刷到一个很妙的本地咖啡地图'}
           style={{ ...field, marginTop: 14, resize: 'vertical', lineHeight: 1.6 }} />
 
         {/* 图片附件 */}

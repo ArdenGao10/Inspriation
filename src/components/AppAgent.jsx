@@ -21,9 +21,9 @@ function GlowDot({ size = 24 }) {
 
 function UserBubble({ children }) {
   return (
-    <div style={{ alignSelf: 'flex-end', maxWidth: '80%', padding: '14px 18px', borderRadius: '16px 4px 16px 16px',
+    <div style={{ alignSelf: 'flex-end', maxWidth: '82%', padding: '11px 15px', borderRadius: '16px 4px 16px 16px',
       background: 'rgba(212,148,58,0.08)',
-      fontSize: 14.5, lineHeight: 1.55, color: G.ink, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+      fontSize: 14.5, lineHeight: 1.5, color: G.ink, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
       {children}
     </div>
   );
@@ -33,8 +33,8 @@ function AgentBubble({ children, maxW = '80%' }) {
   return (
     <div style={{ alignSelf: 'flex-start', display: 'flex', gap: 10, alignItems: 'flex-start', maxWidth: maxW }}>
       <div style={{ marginTop: 6 }}><GlowDot size={24} /></div>
-      <div style={{ flex: 1, padding: '16px 20px', borderRadius: '4px 16px 16px 16px', background: '#FFFCF7',
-        border: '1px solid #E8DFD0', fontSize: 14.5, lineHeight: 1.6, color: G.ink,
+      <div style={{ flex: 1, padding: '12px 16px', borderRadius: '4px 16px 16px 16px', background: '#FFFCF7',
+        border: '1px solid #E8DFD0', fontSize: 14.5, lineHeight: 1.55, color: G.ink,
         boxShadow: '0 2px 10px rgba(120,90,30,0.04)', wordBreak: 'break-word' }}>
         {children}
       </div>
@@ -122,7 +122,7 @@ function salvageOptions(text) {
 // 选中后该卡金色加粗描边，其余变灰；全组锁定不再可点（防重复发送）。
 function DirectionCards({ items, picked, onPick }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, margin: '8px 0' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 7, margin: '6px 0 2px' }}>
       {items.map((c, j) => {
         const on = picked === c.label;
         const dim = picked && !on;
@@ -130,8 +130,8 @@ function DirectionCards({ items, picked, onPick }) {
           <div key={j} className={`gdir-card${picked ? ' gdir-locked' : ''}`}
             onClick={() => { if (!picked) onPick && onPick(c); }}
             style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              background: '#FFFCF7', borderRadius: 12, padding: '12px 16px',
+              display: 'flex', alignItems: 'center', gap: 11,
+              background: '#FFFCF7', borderRadius: 12, padding: '10px 14px',
               border: `${on ? 2 : 1}px solid ${on ? G.gold : '#E8DFD0'}`,
               cursor: picked ? 'default' : 'pointer',
               opacity: dim ? 0.5 : 1,
@@ -311,22 +311,25 @@ export function AppAgent() {
 
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
-      {/* 头部：光晕收束在这一格内，正中对齐 Agent 那颗闪烁星星，避免光点飘到下方卡片旁边 */}
-      <div style={{ position: 'relative', overflow: 'hidden', zIndex: 2, padding: '14px 22px 14px' }}>
-        <GlowField x="50%" y="30%" r={170} intensity={0.5} motes={6} spread={0.7} />
+      {/* 头部：收成一条细行 —— 闪烁星星 + 标题 + 副标题同排居中，少占垂直空间 */}
+      <div style={{ position: 'relative', overflow: 'hidden', zIndex: 2, padding: '11px 20px 9px' }}>
+        <GlowField x="50%" y="20%" r={130} intensity={0.42} motes={5} spread={0.7} />
         {messages.length > 1 && (
           <span className="gpress" onClick={clearChat} title="清空，开始新对话"
-            style={{ position: 'absolute', right: 16, top: 16, zIndex: 2, cursor: loading ? 'default' : 'pointer',
-              fontSize: 11.5, color: G.inkFaint, opacity: loading ? 0.4 : 1 }}>新对话</span>
+            style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', zIndex: 2,
+              display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 11px 5px 9px', borderRadius: 999,
+              border: `1px solid ${G.hair}`, background: '#fff', boxShadow: '0 1px 4px rgba(120,90,30,0.05)',
+              cursor: loading ? 'default' : 'pointer', fontSize: 11.5, color: G.inkSoft, opacity: loading ? 0.4 : 1 }}>
+            <GIcon name="plus" size={12} color={G.gold} sw={2.2} />新对话
+          </span>
         )}
-        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-          <GlowDot size={30} />
-          <div style={{ fontFamily: G.serif, fontSize: 18, color: G.ink, letterSpacing: 0.4 }}>灵感 Agent</div>
-          <div style={{ fontSize: 11.5, color: G.inkFaint, letterSpacing: 0.4 }}>把一句话,聊成一个方案</div>
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9 }}>
+          <GlowDot size={22} />
+          <span style={{ fontFamily: G.serif, fontSize: 16.5, color: G.ink, letterSpacing: 0.4 }}>灵感 Agent</span>
         </div>
       </div>
       <div ref={scrollerRef} className="glow-scroll" style={{ position: 'relative', zIndex: 2, flex: 1, minHeight: 0, overflowY: 'auto',
-        padding: '4px 20px 12px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        padding: '2px 20px 10px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         {messages.map((m, i) => (
           m.role === 'user'
             ? <UserBubble key={i}>{m.text}</UserBubble>
@@ -337,21 +340,23 @@ export function AppAgent() {
         ))}
         {loading && <AgentBubble><TypingDots /></AgentBubble>}
       </div>
-      <div style={{ position: 'relative', zIndex: 3, padding: '8px 20px 14px',
-        background: 'linear-gradient(to top, rgba(253,251,244,0.97) 60%, rgba(253,251,244,0))' }}>
+      <div style={{ position: 'relative', zIndex: 3, padding: '10px 20px 14px', background: G.bg }}>
         <form onSubmit={(e) => { e.preventDefault(); submitDraft(); }}
-          style={{ display: 'flex', alignItems: 'center', gap: 10, height: 46, borderRadius: 999, padding: '0 8px 0 18px',
-          background: '#fff', border: `1px solid ${G.hair}`, boxShadow: '0 3px 14px rgba(120,90,30,0.06)' }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 8, height: 46, borderRadius: 999, padding: '0 6px 0 18px',
+          background: '#fff', border: `1px solid ${canSend ? 'rgba(217,165,42,0.5)' : G.hair}`,
+          boxShadow: canSend ? '0 4px 16px rgba(217,165,42,0.13)' : '0 2px 10px rgba(120,90,30,0.05)',
+          transition: 'border-color .2s ease, box-shadow .2s ease' }}>
           <input value={draft} onChange={(e) => setDraft(e.target.value)} disabled={loading}
             placeholder={loading ? 'Agent 思考中…' : '继续聊聊你的想法…'}
             style={{ flex: 1, height: 44, border: 'none', outline: 'none', background: 'transparent',
               fontSize: 14, color: G.ink, fontFamily: 'inherit' }} />
           <button type="submit" disabled={!canSend} className="gpress"
-            style={{ width: 36, height: 36, borderRadius: '50%', display: 'grid', placeItems: 'center',
-              cursor: canSend ? 'pointer' : 'default', background: G.bg, border: 'none',
-              boxShadow: 'inset 0 0 0 1px rgba(217,165,42,0.4)',
-              opacity: canSend ? 1 : 0.45, padding: 0 }}>
-            <GIcon name="up" size={16} color={G.gold} sw={1.9} />
+            style={{ width: 38, height: 38, borderRadius: '50%', display: 'grid', placeItems: 'center',
+              cursor: canSend ? 'pointer' : 'default', border: 'none', padding: 0,
+              background: canSend ? G.gold : G.bgWarm,
+              boxShadow: canSend ? '0 3px 10px rgba(217,165,42,0.4)' : 'inset 0 0 0 1px ' + G.hair,
+              transition: 'background .2s ease, box-shadow .2s ease' }}>
+            <GIcon name="up" size={17} color={canSend ? '#fff' : G.inkFaint} sw={2} />
           </button>
         </form>
       </div>
