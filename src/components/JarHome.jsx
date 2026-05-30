@@ -106,28 +106,29 @@ function PageIdle({ onShake, shaking, fading }) {
 
 // ── SYNTH SEQUENCE ── (pending=true 表示后台 API 还没返回；动画跑完会等结果就绪再揭晓)
 function SynthSequence({ onDone, pending }) {
-  const [phase, setPhase] = React.useState('gather');
-  const [cap, setCap] = React.useState(0);
+  const steps = React.useMemo(() => [
+    { phase: 'gather', caption: '收集素材中' },
+    { phase: 'think', caption: '寻找隐藏的关联点' },
+    { phase: 'condense', caption: '正在合成新灵感' },
+  ], []);
+  const [step, setStep] = React.useState(0);
   const [capVisible, setCapVisible] = React.useState(true);
   const [timelineDone, setTimelineDone] = React.useState(false);
-  const captions = ['收集素材中', '寻找隐藏的关联点', '正在合成新灵感'];
   React.useEffect(() => {
     const t = [];
-    t.push(setTimeout(() => setPhase('think'), 950));
-    t.push(setTimeout(() => setPhase('condense'), 2500));
     t.push(setTimeout(() => setTimelineDone(true), 3250));
-    // 文案轮播：每 2 秒切一句，循环播放（淡出 → 切换 → 淡入），合成结束时随组件卸载停止
+    // 文案和光晕阶段同频轮播：淡出 → 切换 step → 淡入，合成结束时随组件卸载停止
     const fadeMs = 260;
     const interval = setInterval(() => {
       setCapVisible(false);
       const swap = setTimeout(() => {
-        setCap((c) => (c + 1) % captions.length);
+        setStep((s) => (s + 1) % steps.length);
         setCapVisible(true);
       }, fadeMs);
       t.push(swap);
     }, 2000);
     return () => { t.forEach(clearTimeout); clearInterval(interval); };
-  }, []);
+  }, [steps.length]);
   React.useEffect(() => { if (timelineDone && !pending) onDone(); }, [timelineDone, pending]);
 
   const ringR = 86;
@@ -141,6 +142,7 @@ function SynthSequence({ onDone, pending }) {
     };
   }), []);
 
+  const { phase, caption } = steps[step];
   const gathered = phase !== 'gather';
   const condensing = phase === 'condense';
 
@@ -194,7 +196,7 @@ function SynthSequence({ onDone, pending }) {
       <div style={{ position: 'absolute', left: 0, right: 0, bottom: 150, textAlign: 'center' }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8,
           opacity: capVisible ? 1 : 0, transition: 'opacity 0.26s ease-in-out' }}>
-          {serif(captions[cap], { fontFamily: G.serif, fontSize: 17, letterSpacing: 0.6 })}
+          {serif(caption, { fontFamily: G.serif, fontSize: 17, letterSpacing: 0.6 })}
           <span style={{ display: 'inline-flex', gap: 3 }}>
             {[0, 1, 2].map((i) => <span key={i} style={{ width: 4, height: 4, borderRadius: 4, background: G.gold, animation: `f2Twinkle 1.1s ease-in-out ${i * 0.18}s infinite` }} />)}
           </span>
