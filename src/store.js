@@ -23,7 +23,7 @@ let state = {
   saved: load('saved', []),
   needKey: false,                 // 控制 API Key 弹窗
   showUpload: false,              // 控制素材上传弹窗
-  seedToAgent: null,              // 从首页「让 Agent 展开它」带过去的灵感
+  pendingIdea: null,              // 从首页「让 Agent 展开它」带过去的灵感；对话页消费后清空
 };
 
 const subs = new Set();
@@ -43,6 +43,8 @@ export const Store = {
   addSaved(idea) { set({ saved: [{ id: 'i' + Date.now(), ...idea, ts: Date.now() }, ...state.saved] }); },
   removeSaved(id) { set({ saved: state.saved.filter((s) => s.id !== id) }); },
   addFragment(text) { const t = (text || '').trim(); if (!t) return 0; set({ fragments: [...state.fragments, { id: 'f' + Date.now(), text: t }] }); return 1; },
+  setPendingIdea(idea) { set({ pendingIdea: idea || null }); },
+  clearPendingIdea() { if (state.pendingIdea) set({ pendingIdea: null }); },
   // 批量加入素材，返回实际新增条数（用于"输入多少加多少计数"）
   addFragments(list) {
     const items = (list || []).map((t) => String(t).trim()).filter(Boolean)
