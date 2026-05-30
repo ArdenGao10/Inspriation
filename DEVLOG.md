@@ -427,6 +427,20 @@
 3. Deploy。之后每次 push 自动重新部署。
 - `npm run build` 通过。
 
+## 步骤 25 · 接入 Supabase：社区帖子云端共享（T6 第一步）
+
+> 用户建好 Supabase 项目并给了 Project URL + anon key。先把「社区帖子」上云（多人共享才有意义、且不需要登录），个人数据等做了登录再上。
+
+- 装 `@supabase/supabase-js`；新建 `src/lib/supabase.js`：读 `.env` 的 `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`，没配则 `supabase=null` → store 自动回退 localStorage（本地不配也能跑）。
+- `store.js` 的 posts 接云端：
+  - 启动 `loadPostsFromCloud()`：从云端拉 posts（云端为准）；云端空则用本地 `SEED_POSTS` 播种一次；表不存在 / 出错 → `console.warn` + 保持本地，不崩。
+  - `addPost`：本地置顶 + `insert` 云端；`toggleLike`：本地切 + `update` 云端 likes。
+  - `liked`（我赞没赞）是个人态，没 auth 先存本地 `likedIds`，不上云。
+- 个人数据（收藏 / 素材 / 对话 / 偏好）仍 localStorage，等做登录（auth）再上云。
+- ⚠️ 需用户在 Supabase **SQL Editor 建 posts 表 + 开放 RLS**（已给 SQL）；`.env`（gitignore）配 URL+anon key，队友 / Vercel 各自配同样两个值才连同一个库。
+- 安全提醒：当前 RLS policy 是开发期宽松（anon 可读写）。上线前要收紧（配合登录）。
+- `npm run build` 通过（bundle 因 supabase-js 增大到 ~415KB，后续可按需优化）。
+
 ---
 
 > ⚠️ 协作约定（2026-05-31 起）：功能未经用户亲自确认前**不要 push**，只在本地改 + 写 DEVLOG；等用户说「可以下一步」再一次性 push。

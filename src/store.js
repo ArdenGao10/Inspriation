@@ -1,6 +1,7 @@
 // store.js — 全局状态 + localStorage 持久化
 // 极简外部 store（subscribe/get/set）+ React useSyncExternalStore 绑定。
 import { useSyncExternalStore } from 'react';
+import { supabase, hasSupabase } from './lib/supabase.js';
 
 // 灵感罐种子素材（builder 日常碎片）。首次进入写入 localStorage，之后以本地为准。
 export const SEED_FRAGMENTS = [
@@ -46,6 +47,10 @@ const subs = new Set();
 const emit = () => subs.forEach((fn) => fn());
 const PERSIST = { apiKey: 1, fragments: 1, saved: 1, chat: 1, posts: 1, prefs: 1 };
 
+// 我赞过的帖子 id（本地个人态，不上云）；写云端时去掉本地专用的 liked 字段
+let likedIds = load('likedIds', []);
+const cloudPost = (p) => { const { liked, ...rest } = p; return rest; };
+
 function set(patch) {
   state = { ...state, ...patch };
   for (const k in patch) if (PERSIST[k]) save(k, state[k]);
@@ -62,14 +67,37 @@ export const Store = {
   setPendingIdea(idea) { set({ pendingIdea: idea || null }); },
   clearPendingIdea() { if (state.pendingIdea) set({ pendingIdea: null }); },
   setChat(messages) { set({ chat: messages || [] }); },
-  // 社区：发帖（新帖置顶）、点赞切换
+  // 社区：发帖（新帖置顶）、点赞切换。配了 Supabase 就同步云端（失败不影响本地）。
   addPost(post) {
     const p = { id: 'p' + Date.now(), name: '我', kind: '晒成品', media: false, likes: 0, liked: false, comments: 0, ts: Date.now(), ...post };
     set({ posts: [p, ...state.posts] });
+    if (hasSupabase) supabase.from('posts').insert(cloudPost(p)).then(({ error }) => { if (error) console.warn('[supabase] 发帖同步失败：', error.message); });
     return p;
   },
   toggleLike(id) {
-    set({ posts: state.posts.map((p) => p.id === id ? { ...p, liked: !p.liked, likes: p.likes + (p.liked ? -1 : 1) } : p) });
+    const wasLiked = likedIds.includes(id);
+    likedIds = wasLiked ? likedIds.filter((x) => x !== id) : [...likedIds, id];
+    save('likedIds', likedIds);
+    let newLikes = 0;
+    set({ posts: state.posts.map((p) => {
+      if (p.id !== id) return p;
+      newLikes = Math.max(0, p.likes + (wasLiked ? -1 : 1));
+      return { ...p, liked: !wasLiked, likes: newLikes };
+    }) });
+    if (hasSupabase) supabase.from('posts').update({ likes: newLikes }).eq('id', id).then(({ error }) => { if (error) console.warn('[supabase] 点赞同步失败：', error.message); });
+  },
+  // 从云端拉社区帖子（覆盖本地缓存）。云端空则用本地种子播种一次。表不存在/出错则保持本地。
+  async loadPostsFromCloud() {
+    if (!hasSupabase) return;
+    try {
+      let { data, error } = await supabase.from('posts').select('*').order('ts', { ascending: false });
+      if (error) { console.warn('[supabase] 读取 posts 失败（表是否已建？）：', error.message); return; }
+      if (data && data.length === 0) {
+        await supabase.from('posts').upsert(SEED_POSTS.map(cloudPost), { onConflict: 'id', ignoreDuplicates: true });
+        ({ data } = await supabase.from('posts').select('*').order('ts', { ascending: false }));
+      }
+      if (data) set({ posts: data.map((p) => ({ ...p, liked: likedIds.includes(p.id) })) });
+    } catch (e) { console.warn('[supabase] loadPostsFromCloud 异常：', e && e.message); }
   },
   togglePref(tag) {
     const has = state.prefs.includes(tag);
@@ -84,6 +112,9 @@ export const Store = {
     return items.length;
   },
 };
+
+// 启动：配了 Supabase 就从云端拉社区帖子（覆盖本地缓存）；没配则继续用 localStorage
+if (hasSupabase) Store.loadPostsFromCloud();
 
 // React 绑定：组件用 useStore(selector) 订阅 store 的某一部分
 export function useStore(selector) {
