@@ -2,7 +2,7 @@
 import React from 'react';
 import { G } from '../theme.js';
 import { GIcon, GAvatar, GlowField } from './glow.jsx';
-import { useStore } from '../store.js';
+import { Store, useStore } from '../store.js';
 
 export function AppMe() {
   const savedCount = useStore((s) => s.saved.length);
@@ -35,7 +35,7 @@ export function AppMe() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '26px 22px 0', padding: '14px 0', borderTop: `1px solid ${G.hair2}`, borderBottom: `1px solid ${G.hair2}` }}>
+        <div className="gpress" onClick={() => Store.set({ showUpload: true })} style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '26px 22px 0', padding: '14px 0', borderTop: `1px solid ${G.hair2}`, borderBottom: `1px solid ${G.hair2}`, cursor: 'pointer' }}>
           <div style={{ width: 38, height: 46, borderRadius: '8px 8px 14px 14px', position: 'relative', overflow: 'hidden',
             background: 'linear-gradient(158deg, rgba(255,255,252,0.7), rgba(255,238,180,0.5))', border: '1px solid rgba(190,150,70,0.25)',
             boxShadow: 'inset 0 -8px 14px rgba(255,222,132,0.5)' }}>

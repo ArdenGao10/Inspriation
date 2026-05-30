@@ -81,7 +81,9 @@ function PageIdle({ onShake, shaking, fading }) {
     <>
       <div style={{ position: 'relative', zIndex: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 22px 0' }}>
         {serif('灵感罐', { fontSize: 17, letterSpacing: 0.5 })}
-        <GIcon name="bell" size={19} color={G.inkSoft} />
+        <span className="gpress" onClick={() => Store.set({ showUpload: true })} title="添加素材" style={{ display: 'inline-flex', cursor: 'pointer' }}>
+          <GIcon name="plus" size={21} color={G.gold} sw={1.9} />
+        </span>
       </div>
       <div style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <div style={{ height: 36 }} />
@@ -225,7 +227,9 @@ function PageResult({ onBack, onAgain, onExpand, result, err }) {
         <span className="gpress" onClick={onBack} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13.5, color: G.inkSoft, cursor: 'pointer' }}>
           <span style={{ fontSize: 18, lineHeight: 1 }}>‹</span> 罐子
         </span>
-        <GIcon name="bell" size={19} color={G.inkSoft} />
+        <span className="gpress" onClick={() => Store.set({ showUpload: true })} title="添加素材" style={{ display: 'inline-flex', cursor: 'pointer' }}>
+          <GIcon name="plus" size={21} color={G.gold} sw={1.9} />
+        </span>
       </div>
       <div style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 34px', animation: 'f2Rise 0.6s ease-out' }}>
         <Eyebrow center>刚刚合成 · 全新灵感</Eyebrow>

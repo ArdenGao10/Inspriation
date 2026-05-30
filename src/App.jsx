@@ -1,11 +1,12 @@
-// App.jsx — 应用根：4 Tab 切换 + 挂载 API Key 弹窗。响应式：移动端全屏 / 桌面端居中列。
+// App.jsx — 应用根：4 Tab 切换 + 全局弹窗（API Key / 素材上传）。
 import React from 'react';
-import { AppPhone } from './components/AppShell.jsx';
+import { AppShell } from './components/AppShell.jsx';
 import { JarHome } from './components/JarHome.jsx';
 import { AppAgent } from './components/AppAgent.jsx';
 import { AppCommunity } from './components/AppCommunity.jsx';
 import { AppMe } from './components/AppMe.jsx';
 import { KeyModal } from './components/KeyModal.jsx';
+import { UploadModal } from './components/UploadModal.jsx';
 
 export default function App() {
   const [tab, setTab] = React.useState('home');
@@ -15,11 +16,10 @@ export default function App() {
   else if (tab === 'community') screen = <AppCommunity />;
   else screen = <AppMe />;
   return (
-    <div className="app-outer">
-      <div className="app-frame">
-        <AppPhone active={tab} onChange={setTab}>{screen}</AppPhone>
-        <KeyModal />
-      </div>
-    </div>
+    <>
+      <AppShell active={tab} onChange={setTab}>{screen}</AppShell>
+      <KeyModal />
+      <UploadModal />
+    </>
   );
 }

@@ -2,20 +2,28 @@
 html, body { margin: 0; height: 100%; background: #FDFBF4; font-family: "PingFang SC", system-ui, sans-serif; }
 #root { width: 100%; height: 100%; }
 
-/* 响应式外壳：移动端全屏，桌面端居中为一列舒适宽度（去掉了模拟手机外框）。 */
-.app-outer { width: 100%; min-height: 100dvh; display: flex; justify-content: center; background: #FDFBF4; }
-.app-frame {
-  position: relative;
-  width: 100%;
-  max-width: 480px;            /* 桌面端列宽上限；移动端自动全宽 */
-  height: 100dvh;
-  overflow: hidden;
-  background: #FEFDF8;
-}
-/* ≥520px（平板/桌面）给居中列加一点边界感，但不再是“手机”造型 */
-@media (min-width: 520px) {
-  .app-outer { background: #ece9e2; align-items: stretch; }
-  .app-frame { box-shadow: 0 10px 60px rgba(120,90,30,0.12); }
+/* —— 响应式外壳 —— */
+.app-outer { width: 100%; min-height: 100dvh; background: #FDFBF4; }
+
+/* 移动端默认：全屏单列，底部 Tab */
+.app-shell { position: relative; display: flex; flex-direction: column; height: 100dvh; width: 100%; background: #FEFDF8; overflow: hidden; }
+.app-main { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; background: #FEFDF8; }
+.app-content { flex: 1; min-height: 0; position: relative; overflow: hidden; }
+.side-nav { display: none; }
+
+/* 桌面端（≥900px）：左侧边栏 + 宽内容区，真正的 Web 形态 */
+@media (min-width: 900px) {
+  .app-outer { background: #ece9e2; display: flex; justify-content: center; }
+  .app-shell { flex-direction: row; width: 100%; max-width: 1200px; height: 100dvh; box-shadow: 0 12px 70px rgba(120,90,30,0.14); }
+  .side-nav {
+    display: flex; flex-direction: column; gap: 4px;
+    flex: 0 0 240px; width: 240px; padding: 30px 16px 22px;
+    border-right: 1px solid rgba(70,58,30,0.06);
+    background: linear-gradient(180deg, #FCF7EA, #FEFDF8 60%);
+  }
+  /* 宽屏下把内容收进一个舒适列，避免被拉得太宽 */
+  .app-content { max-width: 720px; width: 100%; margin: 0 auto; }
+  .bottom-nav { display: none !important; }
 }
 
 /* —— glow-core —— */

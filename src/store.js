@@ -22,6 +22,7 @@ let state = {
   fragments: load('fragments', SEED_FRAGMENTS).map((t, i) => typeof t === 'string' ? { id: 'seed' + i, text: t } : t),
   saved: load('saved', []),
   needKey: false,                 // 控制 API Key 弹窗
+  showUpload: false,              // 控制素材上传弹窗
   seedToAgent: null,              // 从首页「让 Agent 展开它」带过去的灵感
 };
 
@@ -41,7 +42,15 @@ export const Store = {
   set,
   addSaved(idea) { set({ saved: [{ id: 'i' + Date.now(), ...idea, ts: Date.now() }, ...state.saved] }); },
   removeSaved(id) { set({ saved: state.saved.filter((s) => s.id !== id) }); },
-  addFragment(text) { const t = (text || '').trim(); if (!t) return; set({ fragments: [...state.fragments, { id: 'f' + Date.now(), text: t }] }); },
+  addFragment(text) { const t = (text || '').trim(); if (!t) return 0; set({ fragments: [...state.fragments, { id: 'f' + Date.now(), text: t }] }); return 1; },
+  // 批量加入素材，返回实际新增条数（用于"输入多少加多少计数"）
+  addFragments(list) {
+    const items = (list || []).map((t) => String(t).trim()).filter(Boolean)
+      .map((t, i) => ({ id: 'f' + Date.now() + '-' + i, text: t }));
+    if (!items.length) return 0;
+    set({ fragments: [...state.fragments, ...items] });
+    return items.length;
+  },
 };
 
 // React 绑定：组件用 useStore(selector) 订阅 store 的某一部分
