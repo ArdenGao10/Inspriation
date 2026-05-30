@@ -30,23 +30,23 @@ export function ChubbyJar({ shaking = false, fading = false }) {
       animation: shaking ? 'f2Shake 0.8s ease-in-out' : 'none', transformOrigin: '50% 82%' }}>
       <div style={{ position: 'absolute', left: '50%', top: '60%', width: 214, height: 214, transform: 'translate(-50%,-50%)',
         background: 'radial-gradient(circle, rgba(255,225,142,0.42), rgba(255,225,142,0) 68%)', filter: 'blur(16px)' }} />
-      {/* knob */}
-      <div style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', width: 40, height: 16, zIndex: 6,
+      {/* knob —— 与瓶身统一的通透磨砂质感 */}
+      <div style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', width: 42, height: 16, zIndex: 6,
         borderRadius: '11px 11px 6px 6px',
-        background: 'radial-gradient(130% 130% at 38% 26%, rgba(255,252,241,0.96), rgba(245,226,184,0.9) 72%, rgba(229,203,142,0.86))',
-        boxShadow: 'inset 0 2px 2.5px rgba(255,255,255,0.8), inset 0 -2px 4px rgba(200,160,80,0.2), 0 2px 4px rgba(170,130,50,0.16)' }} />
-      {/* stopper dome */}
+        background: 'radial-gradient(130% 130% at 40% 28%, rgba(255,253,247,0.9), rgba(238,232,214,0.8) 70%, rgba(223,212,182,0.78))',
+        boxShadow: 'inset 0 1.5px 2px rgba(255,255,255,0.62), inset 0 -2px 4px rgba(185,165,110,0.14), 0 2px 4px rgba(170,140,75,0.12)' }} />
+      {/* stopper dome —— 玻璃通透 + 青色环境反光，呼应瓶身 */}
       <div style={{ position: 'absolute', top: 22, left: '50%', transform: 'translateX(-50%)', width: 100, height: 31, zIndex: 5,
         borderRadius: '17px 17px 8px 8px', overflow: 'hidden',
-        background: 'radial-gradient(130% 150% at 36% 22%, rgba(255,251,236,0.92), rgba(247,229,186,0.82) 56%, rgba(232,207,150,0.84))',
-        boxShadow: 'inset 8px 6px 12px rgba(255,255,255,0.48), inset -10px -8px 14px rgba(205,165,80,0.24), 0 4px 9px rgba(175,135,55,0.15)' }}>
-        <div style={{ position: 'absolute', top: 6, left: 18, width: 11, height: 17, borderRadius: 10, background: 'linear-gradient(180deg, rgba(255,255,255,0.68), transparent)', filter: 'blur(0.7px)' }} />
+        background: 'radial-gradient(130% 150% at 36% 24%, rgba(255,253,246,0.9), rgba(237,239,231,0.74) 50%, rgba(232,223,198,0.82))',
+        boxShadow: 'inset 7px 5px 13px rgba(255,255,255,0.42), inset -9px -7px 15px rgba(160,180,175,0.16), inset 0 0 0 1px rgba(255,255,255,0.34), 0 3px 8px rgba(175,140,70,0.12)' }}>
+        <div style={{ position: 'absolute', top: 6, left: 18, width: 11, height: 17, borderRadius: 10, background: 'linear-gradient(180deg, rgba(255,255,255,0.5), transparent)', filter: 'blur(0.8px)' }} />
       </div>
-      {/* mouth rim */}
+      {/* mouth rim —— 同步柔化为磨砂玻璃 */}
       <div style={{ position: 'absolute', top: 52, left: '50%', transform: 'translateX(-50%)', width: 132, height: 15, zIndex: 4,
         borderRadius: '8px 8px 6px 6px',
-        background: 'linear-gradient(180deg, rgba(255,254,248,0.92), rgba(239,217,161,0.74))',
-        boxShadow: 'inset 0 2px 3px rgba(255,255,255,0.78), inset 0 -3px 6px rgba(205,165,80,0.2), 0 3px 7px rgba(175,135,55,0.13), 0 0 0 1px rgba(255,255,255,0.32)' }} />
+        background: 'linear-gradient(180deg, rgba(255,254,250,0.9), rgba(233,227,208,0.72))',
+        boxShadow: 'inset 0 2px 3px rgba(255,255,255,0.6), inset -2px -3px 6px rgba(160,180,175,0.14), 0 3px 7px rgba(175,140,70,0.1), 0 0 0 1px rgba(255,255,255,0.3)' }} />
       {/* body */}
       <div style={{ position: 'absolute', top: 63, left: '50%', transform: 'translateX(-50%)', width: 218, height: H - 72, zIndex: 3,
         borderRadius: '42px 42px 64px 64px / 34px 34px 58px 58px', overflow: 'hidden', backdropFilter: 'blur(2.2px)', WebkitBackdropFilter: 'blur(2.2px)',
