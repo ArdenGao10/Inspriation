@@ -296,10 +296,15 @@ export function JarHome({ onExpand }) {
       .finally(() => setPending(false));
   };
   const reset = () => { setStage('idle'); setResult(null); setErr(null); };
+  // 「让 Agent 展开它」：把结果存进 store.pendingIdea，再让父级切到对话 Tab。
+  const handoffToAgent = (idea) => {
+    if (idea) Store.setPendingIdea(idea);
+    if (onExpand) onExpand();
+  };
   return (
     <>
       {stage === 'result'
-        ? <PageResult onBack={reset} onAgain={() => { reset(); setTimeout(go, 0); }} onExpand={onExpand} result={result} err={err} />
+        ? <PageResult onBack={reset} onAgain={() => { reset(); setTimeout(go, 0); }} onExpand={handoffToAgent} result={result} err={err} />
         : <PageIdle onShake={go} shaking={stage === 'shaking'} fading={stage === 'synth'} />}
       {stage === 'synth' && <SynthSequence pending={pending} onDone={() => setStage('result')} />}
     </>
