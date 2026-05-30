@@ -85,6 +85,33 @@
 
 `npm run build` 通过（42 模块）。
 
+## 步骤 8 · 首页 idea → 对话页跨页流转
+
+把灵感罐合成出来的 idea 通过全局 store 带到对话页，自动展开成一轮真实的 Agent 对话。
+
+### Store 层（`store.js`）
+- 删掉之前留着没用的 `seedToAgent` 占位，正式新增 `pendingIdea` 字段（默认 `null`），不进 `PERSIST` —— 只是一次性跨页传递、不需要落盘。
+- 新增 `Store.setPendingIdea(idea)` / `Store.clearPendingIdea()` 两个方法，对话页消费完调用 `clearPendingIdea()` 复位。
+
+### 首页（`JarHome.jsx`）
+- 结果页「让 Agent 展开它 →」按钮原本只调用父级 `onExpand` 切 Tab，现在多一步：先 `Store.setPendingIdea(result)` 把刚合成的 idea 写进 store。
+- 包了一个本地 `handoffToAgent(idea)`：`setPendingIdea(idea)` → `onExpand()`，保持 PageResult 组件干净，路由 / store 都在 JarHome 这一层处理。
+
+### 对话页（`AppAgent.jsx`）
+- 用 `useStore((s) => s.pendingIdea)` 订阅。`useEffect` 监听 `pendingIdea`：
+  - `null` → 啥也不做，保留设计稿那套静态样例对话。
+  - 非空 → **同步抓取并立即 `clearPendingIdea()`**（避免 StrictMode 双触发、避免后续重渲染重复发起），再追加一条用户气泡「帮我展开这个灵感:{title}」、调用 `Agent.complete()` 拉智谱回复。
+- 没 Key 时走 `Agent.ensureKey()` 弹 KeyModal，灵感原地保留（不清空），用户填完 Key 切回来会重新触发。
+- API 失败兜底：Agent 气泡显示「抱歉,展开这个灵感时出错了:{err.message}」。
+- Prompt 模板严格按需求文档拼装（确认核心价值 → 给 2-3 个方向 → 等用户选）；`title = lead + accent`，`description = blurb`。
+- 真实消息存在本地 `messages` 数组里渲染；同时引入 `TypingDots` 加载态气泡（复用 `f2Twinkle` 关键帧）。加了 `scrollerRef`，新消息进来自动滚到底。
+- 默认形态判断改成 `hasConversation = messages.length > 0 || loading` —— 一旦真实对话开始，原静态样本就让位给真实流。
+- 把设计稿那段静态对话抽成内部 `<StaticDemo />` 组件，逻辑更清晰，不动它的视觉。
+
+### 验证
+- `npm run build` 通过（42 模块,无新增报错）。
+- 三步分别提交 push：`store` → `JarHome` → `AppAgent`,每步独立可回滚。
+
 ---
 
 ## 待办（后续步骤）
