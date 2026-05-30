@@ -97,6 +97,13 @@ export const Store = {
     set({ conversations: state.conversations.map((c) => c.id === conv.id
       ? { ...c, messages: msgs, title: convTitle(msgs), updatedAt: Date.now() } : c) });
   },
+  // 按会话 id 读写（不依赖「当前激活」）——回复要写回它发起时所属的会话，哪怕中途切了会话
+  getConvMessages: (id) => { const c = state.conversations.find((x) => x.id === id); return c ? c.messages : EMPTY_MSGS; },
+  setConvMessages(id, messages) {
+    const msgs = messages || [];
+    set({ conversations: state.conversations.map((c) => c.id === id
+      ? { ...c, messages: msgs, title: convTitle(msgs), updatedAt: Date.now() } : c) });
+  },
   newConversation(messages) { const it = makeConv(messages || []); set({ conversations: [it, ...state.conversations], activeConvId: it.id }); return it.id; },
   switchConversation(id) { if (state.conversations.some((c) => c.id === id)) set({ activeConvId: id }); },
   deleteConversation(id) {

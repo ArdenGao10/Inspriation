@@ -274,17 +274,16 @@ export function AppAgent() {
   const messages = useStore(selectChat);
   const conversations = useStore((s) => s.conversations);
   const activeConvId = useStore((s) => s.activeConvId);
-  const [loading, setLoading] = React.useState(false);
+  // 「正在等回复」的会话 id（按会话记，而非全局布尔）→ 切到别的会话不会误显示思考中
+  const [loadingConvId, setLoadingConvId] = React.useState(null);
+  const loading = loadingConvId === activeConvId; // 当前查看的会话是否在等回复
   const [draft, setDraft] = React.useState('');
   const [showHistory, setShowHistory] = React.useState(false);
   const scrollerRef = React.useRef(null);
   // 已处理过的 idea 引用 —— StrictMode 双触发兜底
   const handledIdeaRef = React.useRef(null);
 
-  // 写消息：直接落到 store（同步更新 state + 写 localStorage）。读最新值用 Store.getChat()。
-  const writeMessages = (next) => Store.setChat(next);
-
-  // 把当前对话历史转成智谱 API 的 messages 数组（system + user/assistant 轮替）。
+  // 把某会话历史转成智谱 API 的 messages 数组（system + user/assistant 轮替）。
   // agent 消息回传纯文字（say），不回传 options 的 JSON —— 省 token、模型也更清楚。
   const buildApiHistory = (msgs) => [
     { role: 'system', content: SYS_PROMPT },
@@ -294,31 +293,35 @@ export function AppAgent() {
     })),
   ];
 
-  // 发一条用户消息 → 追加用户气泡 → 跑 Agent（工具循环 + 抽取选项）→ 追加结构化 agent 气泡
+  // 发一条用户消息 → 追加用户气泡 → 跑 Agent → 追加 agent 气泡。
+  // 关键：进函数就锁定本轮所属会话 convId，全程写回它；中途切/开新会话也不串台。
   const sendUser = async (text) => {
     const t = (text || '').trim();
-    if (!t || loading) return;
+    if (!t) return;
+    const convId = Store.get().activeConvId;
+    if (loadingConvId === convId) return; // 该会话已在等回复，不重复发
     if (!Agent.ensureKey()) return;
-    const nextAfterUser = [...Store.getChat(), { role: 'user', text: t }];
-    writeMessages(nextAfterUser);
-    setLoading(true);
+    const nextAfterUser = [...Store.getConvMessages(convId), { role: 'user', text: t }];
+    Store.setConvMessages(convId, nextAfterUser);
+    setLoadingConvId(convId);
     try {
       const reply = await Agent.runAgent(buildApiHistory(nextAfterUser), { model: Agent.CHAT_MODEL });
       let options = reply.options || [];
       if (!options.length) { const s = salvageOptions(reply.say); if (s) options = s.options; } // 本地正则兜底
-      writeMessages([...Store.getChat(), { role: 'agent', say: reply.say || '(没拿到回复)', options }]);
+      Store.setConvMessages(convId, [...Store.getConvMessages(convId), { role: 'agent', say: reply.say || '(没拿到回复)', options }]);
     } catch (err) {
       const msg = err && err.message === 'NO_KEY' ? '请先连接智谱 API Key' : (err && err.message) || '展开失败';
-      writeMessages([...Store.getChat(), { role: 'agent', say: '抱歉，出错了：' + msg }]);
+      Store.setConvMessages(convId, [...Store.getConvMessages(convId), { role: 'agent', say: '抱歉，出错了：' + msg }]);
     } finally {
-      setLoading(false);
+      setLoadingConvId((cur) => (cur === convId ? null : cur));
     }
   };
 
   // 选项卡点击 → 给当前 agent 气泡打 picked 标记 + 自动发一条用户消息
   const handlePickDirection = (msgIndex, choice) => {
-    const updated = Store.getChat().map((mm, ii) => ii === msgIndex ? { ...mm, picked: choice.label } : mm);
-    writeMessages(updated);
+    const convId = Store.get().activeConvId;
+    const updated = Store.getConvMessages(convId).map((mm, ii) => ii === msgIndex ? { ...mm, picked: choice.label } : mm);
+    Store.setConvMessages(convId, updated);
     sendUser(choice.desc ? `我选「${choice.label}」：${choice.desc}` : `我选「${choice.label}」`);
   };
 
@@ -329,16 +332,15 @@ export function AppAgent() {
     sendUser(t);
   };
 
-  // 「新对话」→ 开一个全新会话（旧会话进历史，不被覆盖）
+  // 「新对话」→ 开一个全新会话（旧会话进历史，不被覆盖）。始终可点：
+  // 即便某会话还在等回复，新会话也独立，回复会写回原会话不串台。
   const clearChat = () => {
-    if (loading) return;
     Store.newConversation([greetingMsg()]);
     setShowHistory(false);
     setDraft('');
   };
   // 历史里切换会话
   const pickConversation = (id) => {
-    if (loading) return;
     Store.switchConversation(id);
     setShowHistory(false);
   };
@@ -391,15 +393,13 @@ export function AppAgent() {
             cursor: 'pointer', fontSize: 11.5, color: G.inkSoft }}>
           <GIcon name="history" size={13} color={G.gold} sw={1.8} />历史
         </span>
-        {messages.length > 1 && (
-          <span className="gpress" onClick={clearChat} title="开始新对话"
-            style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', zIndex: 2,
-              display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 11px 5px 9px', borderRadius: 999,
-              border: `1px solid ${G.hair}`, background: '#fff', boxShadow: '0 1px 4px rgba(120,90,30,0.05)',
-              cursor: loading ? 'default' : 'pointer', fontSize: 11.5, color: G.inkSoft, opacity: loading ? 0.4 : 1 }}>
-            <GIcon name="plus" size={12} color={G.gold} sw={2.2} />新对话
-          </span>
-        )}
+        <span className="gpress" onClick={clearChat} title="开始新对话"
+          style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', zIndex: 2,
+            display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 11px 5px 9px', borderRadius: 999,
+            border: `1px solid ${G.hair}`, background: '#fff', boxShadow: '0 1px 4px rgba(120,90,30,0.05)',
+            cursor: 'pointer', fontSize: 11.5, color: G.inkSoft }}>
+          <GIcon name="plus" size={12} color={G.gold} sw={2.2} />新对话
+        </span>
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9 }}>
           <GlowDot size={22} />
           <span style={{ fontFamily: G.serif, fontSize: 16.5, color: G.ink, letterSpacing: 0.4 }}>灵感 Agent</span>
