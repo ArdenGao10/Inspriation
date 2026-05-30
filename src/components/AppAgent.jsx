@@ -194,8 +194,13 @@ const SYS_PROMPT = `你是「灵感 Agent」，一个有经验的产品搭子。
 - options 是给用户点击的选项，0-3 个；当前不需要让用户选择时给 []（空数组）。
 - say 里不要重复 options 的内容，也不要写「方向A」「1.」这种编号——选项由 options 字段单独给。`;
 
-// 无灵感进来时的开场白（也用于「新对话」重置）
-const GREETING = '你今天有什么想聊的灵感吗？可以聊一聊。';
+// 无灵感进来时的开场白（也用于「新对话」重置）。开场就带可点选项，直观体现「可选模式」。
+const GREETING = '你今天有什么想聊的灵感吗？可以直接打字，也可以点下面的选项开始。';
+const GREETING_OPTIONS = [
+  { label: '帮我想个新点子', desc: '从灵感罐里碰一个出来' },
+  { label: '我有个想法想聊聊', desc: '说给你听，一起展开' },
+];
+const greetingMsg = () => ({ role: 'agent', say: GREETING, options: GREETING_OPTIONS });
 
 export function AppAgent() {
   const pendingIdea = useStore((s) => s.pendingIdea);
@@ -271,7 +276,7 @@ export function AppAgent() {
   // 清空对话 → 重置成只有开场白的初始态
   const clearChat = () => {
     if (loading) return;
-    writeMessages([{ role: 'agent', say: GREETING }]);
+    writeMessages([greetingMsg()]);
     setDraft('');
   };
 
@@ -280,7 +285,7 @@ export function AppAgent() {
   React.useEffect(() => {
     if (pendingIdea) return;
     if (Store.get().chat.length > 0) return;
-    writeMessages([{ role: 'agent', say: GREETING }]);
+    writeMessages([greetingMsg()]);
   }, [pendingIdea]);
 
   // 监听 store.pendingIdea：来自首页的灵感 → 自动产生第一轮对话

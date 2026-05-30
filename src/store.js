@@ -17,6 +17,11 @@ const NS = 'inspo:';
 const load = (k, d) => { try { const v = localStorage.getItem(NS + k); return v == null ? d : JSON.parse(v); } catch { return d; } };
 const save = (k, v) => { try { localStorage.setItem(NS + k, JSON.stringify(v)); } catch {} };
 
+// 对话历史结构升级：旧版是纯文字 {text}，新版是结构化 {say, options}。
+// 版本不符就清掉旧 chat —— 避免开发期残留的纯文字旧对话盖住新的可点选项交互。
+const CHAT_VERSION = 2;
+if (load('chatVer', 0) !== CHAT_VERSION) { save('chat', []); save('chatVer', CHAT_VERSION); }
+
 let state = {
   apiKey: load('apiKey', ''),     // 用户在弹窗里填的 Key（agent 会优先用 .env 的 VITE_ZHIPU_KEY）
   fragments: load('fragments', SEED_FRAGMENTS).map((t, i) => typeof t === 'string' ? { id: 'seed' + i, text: t } : t),

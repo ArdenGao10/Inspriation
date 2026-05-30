@@ -320,3 +320,10 @@
 
 ### 验证
 - `npm run build` 通过；真实多轮调用确认 flash + JSON 模式稳定返回 `{say, options}`、选项卡必现。
+
+## 步骤 17 · 旧对话自动清 + 开场白自带选项
+
+> 用户更新后仍看到纯文字 —— 极可能是 localStorage 里残留的旧纯文字对话（无 options）盖住了新逻辑。
+
+- `store.js`：加 `CHAT_VERSION`，加载时版本不符就清空旧 `chat`，用户一刷新就是干净的新结构化对话，不用手动清缓存。
+- `AppAgent.jsx`：开场白从纯文字升级为带 `options` 的消息（`greetingMsg()`：「帮我想个新点子」「我有个想法想聊聊」），一进对话页就有可点选项，直观体现「可选模式」；`clearChat`、开场 effect 都用它。
