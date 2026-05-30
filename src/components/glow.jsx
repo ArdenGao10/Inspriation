@@ -61,6 +61,8 @@ export function GIcon({ name, size = 20, color = 'currentColor', sw = 1.4 }) {
     check: 'M5 12.5l4 4L19 7',
     heart: 'M12 20s-6.5-4.2-8.5-8C2.2 9 3.6 6.2 6.4 6.2c1.8 0 2.9 1.1 5.6 3.6 2.7-2.5 3.8-3.6 5.6-3.6 2.8 0 4.2 2.8 2.9 5.8C18.5 15.8 12 20 12 20Z',
     plus:  'M12 6v12M6 12h12',
+    history: 'M12 5a7 7 0 1 0 0 14 7 7 0 0 0 0-14M12 8.6V12l2.4 1.5',
+    trash: 'M5.5 7.5h13M9.5 7.5V6a1.4 1.4 0 0 1 1.4-1.4h2.2A1.4 1.4 0 0 1 14.5 6v1.5M7 7.5l.7 11a1.4 1.4 0 0 0 1.4 1.3h5.8a1.4 1.4 0 0 0 1.4-1.3l.7-11',
     dot:   '',
   }[name] || '';
   if (name === 'dot') return <span style={{ display: 'inline-block', width: size * 0.34, height: size * 0.34, borderRadius: '50%', background: color }} />;

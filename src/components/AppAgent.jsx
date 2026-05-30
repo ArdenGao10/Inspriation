@@ -6,7 +6,7 @@
 import React from 'react';
 import { G } from '../theme.js';
 import { GIcon, GlowField } from './glow.jsx';
-import { Store, useStore } from '../store.js';
+import { Store, useStore, selectChat } from '../store.js';
 import { Agent } from '../lib/agent.js';
 
 function GlowDot({ size = 24 }) {
@@ -217,17 +217,71 @@ const GREETING_OPTIONS = [
 ];
 const greetingMsg = () => ({ role: 'agent', say: GREETING, options: GREETING_OPTIONS });
 
+// 相对时间：刚刚 / x 分钟前 / x 小时前 / x 天前
+function relativeTime(ts) {
+  const d = Date.now() - (ts || 0);
+  if (d < 60e3) return '刚刚';
+  if (d < 3600e3) return Math.floor(d / 60e3) + ' 分钟前';
+  if (d < 86400e3) return Math.floor(d / 3600e3) + ' 小时前';
+  return Math.floor(d / 86400e3) + ' 天前';
+}
+
+// 历史对话抽屉：从左侧滑出，列出全部会话（按更新时间倒序），可切换 / 删除 / 新建。
+function HistoryPanel({ conversations, activeId, onPick, onNew, onDelete, onClose }) {
+  const list = React.useMemo(() => [...conversations].sort((a, b) => b.updatedAt - a.updatedAt), [conversations]);
+  return (
+    <div onClick={onClose} style={{ position: 'absolute', inset: 0, zIndex: 20, display: 'flex',
+      background: 'rgba(46,42,32,0.28)', backdropFilter: 'blur(2px)', animation: 'gFade 0.18s ease-out' }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(82%, 320px)', height: '100%', background: '#FFFDF7',
+        boxShadow: '6px 0 28px rgba(120,90,30,0.18)', display: 'flex', flexDirection: 'column', animation: 'histIn 0.22s ease-out' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 16px 12px' }}>
+          <span style={{ fontFamily: G.serif, fontSize: 17, color: G.ink }}>历史对话</span>
+          <span onClick={onClose} className="gpress" style={{ fontSize: 22, color: G.inkFaint, cursor: 'pointer', lineHeight: 1 }}>×</span>
+        </div>
+        <div onClick={onNew} className="gpress" style={{ margin: '0 12px 6px', padding: '10px 12px', borderRadius: 12, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: 8, border: `1px dashed ${G.hair}`, color: G.gold, fontSize: 13.5, fontWeight: 600 }}>
+          <GIcon name="plus" size={15} color={G.gold} sw={2.2} />开始新对话
+        </div>
+        <div className="glow-scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '4px 12px 16px' }}>
+          {list.map((c) => {
+            const on = c.id === activeId;
+            return (
+              <div key={c.id} onClick={() => onPick(c.id)} className="gpress"
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 11px', borderRadius: 12, cursor: 'pointer',
+                  marginBottom: 4, background: on ? 'rgba(255,243,210,0.7)' : 'transparent',
+                  border: `1px solid ${on ? 'rgba(217,165,42,0.35)' : 'transparent'}` }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13.5, color: G.ink, fontWeight: on ? 600 : 500, whiteSpace: 'nowrap',
+                    overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.title || '新对话'}</div>
+                  <div style={{ fontSize: 11, color: G.inkFaint, marginTop: 2 }}>{relativeTime(c.updatedAt)}</div>
+                </div>
+                <span className="gpress" title="删除" onClick={(e) => { e.stopPropagation(); onDelete(c.id); }}
+                  style={{ flex: '0 0 auto', display: 'inline-flex', padding: 4, cursor: 'pointer', opacity: 0.6 }}>
+                  <GIcon name="trash" size={15} color={G.inkFaint} sw={1.6} />
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AppAgent() {
   const pendingIdea = useStore((s) => s.pendingIdea);
-  // 消息历史改存到全局 store（持久化到 localStorage）→ 切 Tab / 刷新页面都不丢
-  const messages = useStore((s) => s.chat);
+  // 消息历史改存到全局 store 的「多会话」里（持久化）→ 切 Tab / 刷新页面都不丢
+  const messages = useStore(selectChat);
+  const conversations = useStore((s) => s.conversations);
+  const activeConvId = useStore((s) => s.activeConvId);
   const [loading, setLoading] = React.useState(false);
   const [draft, setDraft] = React.useState('');
+  const [showHistory, setShowHistory] = React.useState(false);
   const scrollerRef = React.useRef(null);
   // 已处理过的 idea 引用 —— StrictMode 双触发兜底
   const handledIdeaRef = React.useRef(null);
 
-  // 写消息：直接落到 store（同步更新 state + 写 localStorage）。读最新值用 Store.get().chat。
+  // 写消息：直接落到 store（同步更新 state + 写 localStorage）。读最新值用 Store.getChat()。
   const writeMessages = (next) => Store.setChat(next);
 
   // 把当前对话历史转成智谱 API 的 messages 数组（system + user/assistant 轮替）。
@@ -245,17 +299,17 @@ export function AppAgent() {
     const t = (text || '').trim();
     if (!t || loading) return;
     if (!Agent.ensureKey()) return;
-    const nextAfterUser = [...Store.get().chat, { role: 'user', text: t }];
+    const nextAfterUser = [...Store.getChat(), { role: 'user', text: t }];
     writeMessages(nextAfterUser);
     setLoading(true);
     try {
       const reply = await Agent.runAgent(buildApiHistory(nextAfterUser), { model: Agent.CHAT_MODEL });
       let options = reply.options || [];
       if (!options.length) { const s = salvageOptions(reply.say); if (s) options = s.options; } // 本地正则兜底
-      writeMessages([...Store.get().chat, { role: 'agent', say: reply.say || '(没拿到回复)', options }]);
+      writeMessages([...Store.getChat(), { role: 'agent', say: reply.say || '(没拿到回复)', options }]);
     } catch (err) {
       const msg = err && err.message === 'NO_KEY' ? '请先连接智谱 API Key' : (err && err.message) || '展开失败';
-      writeMessages([...Store.get().chat, { role: 'agent', say: '抱歉，出错了：' + msg }]);
+      writeMessages([...Store.getChat(), { role: 'agent', say: '抱歉，出错了：' + msg }]);
     } finally {
       setLoading(false);
     }
@@ -263,7 +317,7 @@ export function AppAgent() {
 
   // 选项卡点击 → 给当前 agent 气泡打 picked 标记 + 自动发一条用户消息
   const handlePickDirection = (msgIndex, choice) => {
-    const updated = Store.get().chat.map((mm, ii) => ii === msgIndex ? { ...mm, picked: choice.label } : mm);
+    const updated = Store.getChat().map((mm, ii) => ii === msgIndex ? { ...mm, picked: choice.label } : mm);
     writeMessages(updated);
     sendUser(choice.desc ? `我选「${choice.label}」：${choice.desc}` : `我选「${choice.label}」`);
   };
@@ -275,22 +329,35 @@ export function AppAgent() {
     sendUser(t);
   };
 
-  // 清空对话 → 重置成只有开场白的初始态
+  // 「新对话」→ 开一个全新会话（旧会话进历史，不被覆盖）
   const clearChat = () => {
     if (loading) return;
-    writeMessages([greetingMsg()]);
+    Store.newConversation([greetingMsg()]);
+    setShowHistory(false);
     setDraft('');
   };
+  // 历史里切换会话
+  const pickConversation = (id) => {
+    if (loading) return;
+    Store.switchConversation(id);
+    setShowHistory(false);
+  };
+  const removeConversation = (id) => {
+    Store.deleteConversation(id);
+    // 删到一个不剩 → 立刻补一个带开场白的新会话，避免空态
+    if (Store.get().conversations.length === 0) Store.newConversation([greetingMsg()]);
+  };
 
-  // 没有从首页带来灵感、且 store 里也没有历史时，Agent 先抛一句开场白。
-  // store.chat 已有内容（刷新恢复 / 已经聊过）时不再插入，避免覆盖历史。
+  // 没有从首页带来灵感、且一个会话都没有时，开一个带开场白的会话；
+  // activeConvId 失效（指向已删会话）时回落到最近一个，避免空白页。
   React.useEffect(() => {
     if (pendingIdea) return;
-    if (Store.get().chat.length > 0) return;
-    writeMessages([greetingMsg()]);
+    const st = Store.get();
+    if (st.conversations.length === 0) { Store.newConversation([greetingMsg()]); return; }
+    if (!st.conversations.some((c) => c.id === st.activeConvId)) Store.switchConversation(st.conversations[0].id);
   }, [pendingIdea]);
 
-  // 监听 store.pendingIdea：来自首页的灵感 → 自动产生第一轮对话
+  // 监听 store.pendingIdea：来自首页的灵感 → 每次都开一个全新会话再展开（不接在旧对话后面）
   React.useEffect(() => {
     if (!pendingIdea) return;
     if (handledIdeaRef.current === pendingIdea) return; // 同一个 idea 不会被处理两次
@@ -298,6 +365,8 @@ export function AppAgent() {
     handledIdeaRef.current = pendingIdea;
     const idea = pendingIdea;
     Store.clearPendingIdea();
+    Store.newConversation();           // 全新空会话
+    setShowHistory(false);
     sendUser(buildInitialUserMessage(idea));
   }, [pendingIdea]);
 
@@ -314,8 +383,16 @@ export function AppAgent() {
       {/* 头部：收成一条细行 —— 闪烁星星 + 标题 + 副标题同排居中，少占垂直空间 */}
       <div style={{ position: 'relative', overflow: 'hidden', zIndex: 2, padding: '11px 20px 9px' }}>
         <GlowField x="50%" y="20%" r={130} intensity={0.42} motes={5} spread={0.7} />
+        {/* 左上角：历史对话 */}
+        <span className="gpress" onClick={() => setShowHistory(true)} title="历史对话"
+          style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', zIndex: 2,
+            display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 11px 5px 9px', borderRadius: 999,
+            border: `1px solid ${G.hair}`, background: '#fff', boxShadow: '0 1px 4px rgba(120,90,30,0.05)',
+            cursor: 'pointer', fontSize: 11.5, color: G.inkSoft }}>
+          <GIcon name="history" size={13} color={G.gold} sw={1.8} />历史
+        </span>
         {messages.length > 1 && (
-          <span className="gpress" onClick={clearChat} title="清空，开始新对话"
+          <span className="gpress" onClick={clearChat} title="开始新对话"
             style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', zIndex: 2,
               display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 11px 5px 9px', borderRadius: 999,
               border: `1px solid ${G.hair}`, background: '#fff', boxShadow: '0 1px 4px rgba(120,90,30,0.05)',
@@ -360,6 +437,11 @@ export function AppAgent() {
           </button>
         </form>
       </div>
+      {showHistory && (
+        <HistoryPanel conversations={conversations} activeId={activeConvId}
+          onPick={pickConversation} onNew={clearChat} onDelete={removeConversation}
+          onClose={() => setShowHistory(false)} />
+      )}
     </div>
   );
 }

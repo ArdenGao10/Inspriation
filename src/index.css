@@ -67,5 +67,8 @@ button:focus,button:focus-visible{outline:none}
 
 /* —— agent chat —— */
 @keyframes typingDot { 0%,60%,100% { transform: translateY(0); opacity: .35 } 30% { transform: translateY(-5px); opacity: 1 } }
+/* 历史对话抽屉：背景淡入 + 抽屉从左滑入 */
+@keyframes gFade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes histIn { from { transform: translateX(-100%) } to { transform: translateX(0) } }
 /* 方向卡 hover：边框转金、底色微暖；已选/已锁定的卡不再响应 hover */
 .gdir-card:not(.gdir-locked):hover { border-color: #D4943A !important; background: rgba(212,148,58,0.05) !important; }

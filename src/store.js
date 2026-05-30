@@ -25,17 +25,37 @@ const NS = 'inspo:';
 const load = (k, d) => { try { const v = localStorage.getItem(NS + k); return v == null ? d : JSON.parse(v); } catch { return d; } };
 const save = (k, v) => { try { localStorage.setItem(NS + k, JSON.stringify(v)); } catch {} };
 
-// 对话历史结构升级：旧版是纯文字 {text}，新版是结构化 {say, options}。
-// 版本不符就清掉旧 chat —— 避免开发期残留的纯文字旧对话盖住新的可点选项交互。
-// 注意：bump 这个数字 + 整页硬刷新，才能强制清掉浏览器里的旧对话。
-const CHAT_VERSION = 3;
-if (load('chatVer', 0) !== CHAT_VERSION) { save('chat', []); save('chatVer', CHAT_VERSION); }
+// —— 多会话 ——
+// 对话从「单条 chat」升级成「多会话 conversations」：每次「让 Agent 展开它」/「新对话」
+// 都开一个独立会话，左上角历史入口可切换/删除。会话结构 { id, title, messages, updatedAt }。
+const EMPTY_MSGS = [];
+let convSeq = 0;
+const convTitle = (messages) => {
+  const u = (messages || []).find((m) => m.role === 'user');
+  if (u && u.text) return u.text.trim().slice(0, 18);
+  const a = (messages || []).find((m) => m.role === 'agent');
+  const t = a && (a.say || a.text);
+  return t ? String(t).trim().slice(0, 18) : '新对话';
+};
+const makeConv = (messages = []) => ({ id: 'c' + Date.now() + '-' + (convSeq++), title: convTitle(messages), messages, updatedAt: Date.now() });
+export const selectChat = (s) => { const c = s.conversations.find((x) => x.id === s.activeConvId); return c ? c.messages : EMPTY_MSGS; };
+
+// 迁移：旧版单条 chat（结构化 {say, options}）若有内容，并成一个会话；之后只认 conversations。
+const CONV_VERSION = 1;
+if (load('convVer', 0) !== CONV_VERSION) {
+  const old = load('chat', []);
+  const init = (Array.isArray(old) && old.length) ? [makeConv(old)] : [];
+  save('conversations', init);
+  save('activeConvId', init[0] ? init[0].id : '');
+  save('convVer', CONV_VERSION);
+}
 
 let state = {
   apiKey: load('apiKey', ''),     // 用户在弹窗里填的 Key（agent 会优先用 .env 的 VITE_ZHIPU_KEY）
   fragments: load('fragments', SEED_FRAGMENTS).map((t, i) => typeof t === 'string' ? { id: 'seed' + i, text: t } : t),
   saved: load('saved', []),
-  chat: load('chat', []),         // 对话页消息历史 [{role:'user'|'agent', text, picked?}]，持久化 → 刷新不丢
+  conversations: load('conversations', []), // 多会话 [{id,title,messages,updatedAt}]，持久化
+  activeConvId: load('activeConvId', ''),    // 当前激活会话 id
   posts: load('posts', SEED_POSTS), // 社区帖子，持久化
   prefs: load('prefs', []),       // 灵感口味偏好标签，持久化
   needKey: false,                 // 控制 API Key 弹窗
@@ -45,7 +65,7 @@ let state = {
 
 const subs = new Set();
 const emit = () => subs.forEach((fn) => fn());
-const PERSIST = { apiKey: 1, fragments: 1, saved: 1, chat: 1, posts: 1, prefs: 1 };
+const PERSIST = { apiKey: 1, fragments: 1, saved: 1, conversations: 1, activeConvId: 1, posts: 1, prefs: 1 };
 
 // 我赞过的帖子 id（本地个人态，不上云）；写云端时去掉本地专用的 liked 字段
 let likedIds = load('likedIds', []);
@@ -67,7 +87,23 @@ export const Store = {
   removeFragment(id) { set({ fragments: state.fragments.filter((f) => f.id !== id) }); },
   setPendingIdea(idea) { set({ pendingIdea: idea || null }); },
   clearPendingIdea() { if (state.pendingIdea) set({ pendingIdea: null }); },
-  setChat(messages) { set({ chat: messages || [] }); },
+  // —— 多会话读写 ——
+  getChat: () => { const c = state.conversations.find((x) => x.id === state.activeConvId); return c ? c.messages : EMPTY_MSGS; },
+  // 写当前激活会话的消息；没有激活会话则顺手开一个。标题随首条消息自动生成。
+  setChat(messages) {
+    const msgs = messages || [];
+    const conv = state.conversations.find((c) => c.id === state.activeConvId);
+    if (!conv) { const it = makeConv(msgs); set({ conversations: [it, ...state.conversations], activeConvId: it.id }); return; }
+    set({ conversations: state.conversations.map((c) => c.id === conv.id
+      ? { ...c, messages: msgs, title: convTitle(msgs), updatedAt: Date.now() } : c) });
+  },
+  newConversation(messages) { const it = makeConv(messages || []); set({ conversations: [it, ...state.conversations], activeConvId: it.id }); return it.id; },
+  switchConversation(id) { if (state.conversations.some((c) => c.id === id)) set({ activeConvId: id }); },
+  deleteConversation(id) {
+    const rest = state.conversations.filter((c) => c.id !== id);
+    const active = state.activeConvId === id ? (rest[0] ? rest[0].id : '') : state.activeConvId;
+    set({ conversations: rest, activeConvId: active });
+  },
   // 社区：发帖（新帖置顶）、点赞切换。配了 Supabase 就同步云端（失败不影响本地）。
   addPost(post) {
     const p = { id: 'p' + Date.now(), name: '我', kind: '晒成品', media: false, likes: 0, liked: false, comments: 0, ts: Date.now(), ...post };
