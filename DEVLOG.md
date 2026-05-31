@@ -489,3 +489,10 @@
 > 加了一版登录/注册页 + 入口门禁（`lib/auth.js` + `AuthScreen.jsx`，Supabase 可选/本地回退，提交 `5eef8a2`）。实测注册时 Supabase 返回 **"Invalid API key"** —— 即 `.env` 配了 Supabase 但 `VITE_SUPABASE_ANON_KEY`（或 URL）失效/不对，走 Supabase Auth 被拒。
 > 临近 deadline 没时间排查 key，用户决定先停用。`git revert 5eef8a2`（→ `f10b6b2`）整体回退，应用恢复无需登录的可用状态。
 > 代码保留在历史里（`5eef8a2`），以后捡回时：先核对 `.env` 的 `VITE_SUPABASE_ANON_KEY` 是否为当前 Supabase 项目的有效 anon key，再 `git revert f10b6b2` 即可复活整套登录。
+
+## 步骤 30 · MVP 卡片入口门槛 3 轮 → 2 轮
+
+> 用户反馈聊了 3 轮入口还没出现（轮次数法不一致），且更希望早点能用。
+
+- `AppAgent.jsx`：`showCardCTA` 的门槛 `userTurns >= 3` → `>= 2`；并加 `lastAgentIdx >= 0` 兜底（确保有 Agent 气泡可挂）。入口位置不变，仍挂在最后一条 Agent 气泡末尾。
+- `npm run build` 通过（84 模块）。
