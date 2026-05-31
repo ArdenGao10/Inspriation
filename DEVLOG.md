@@ -483,3 +483,29 @@
 - 出现条件：`userTurns >= 3`（用户消息满 3 轮）且非 loading 时，**只挂在最后一条 Agent 气泡**末尾（`i === lastAgentIdx`），随对话推进自然下移、不重复。
 - 删掉原输入框上方那条居中按钮，输入区回归清爽。
 - `npm run build` 通过。
+
+## 步骤 29 · 登录 / 注册页 + 入口门禁（T6 第二步）
+
+> 步骤 25 留的尾巴：「个人数据等做了登录再上云」。这步先把登录做出来——沿用项目「Supabase 可选」的一贯模式：配了 Supabase 用 Supabase Auth，没配回退本地 mock。用户确认方案为「入口门禁 + 沿用现有 Supabase 可选/本地回退」。
+
+### `lib/auth.js`（新增 · 统一鉴权层）
+- 有 Supabase → `auth.signUp / signInWithPassword / signOut`；`init()` 启动拉一次 `getSession` 并 `onAuthStateChange` 订阅，登录态同步进 `store.user`。注册若开了邮箱确认（无 session）→ 返回 `needConfirm`。
+- 没 Supabase → 本地 mock：账号存 `localStorage` 的 `inspo:users`，密码只存非加密强度的轻量哈希（仅本地演示、避免明文）。
+- 模块加载即 `Auth.init()`（StrictMode 下随模块只跑一次，不重复订阅）。store.js 不反向 import auth.js，无循环依赖。
+
+### `store.js`
+- 加两字段：`user`（`{email,name}`，持久化）、`authReady`（mock 模式立即就绪 / Supabase 模式等 getSession，避免登录页闪一下）；`user` 进 `PERSIST`。
+
+### `components/AuthScreen.jsx`（新增 · 光晕风格登录注册页）
+- 品牌光点（复用 `gGlow`）+ 衬线标题；登录/注册分段切换；邮箱 + 密码（注册多一个选填昵称）。
+- 前端校验（邮箱格式、密码 ≥6 位）；错误红字 / 成功金字提示（如「请查收确认邮件」）；底部按模式给出 Supabase / 本地演示说明。
+
+### `App.jsx` 入口门禁
+- `!authReady` → 留白（防登录页闪）；`!user` → 渲染 `AuthScreen`；登录成功 `store.user` 一写入即自动进入四 Tab 主应用。
+
+### `AppMe.jsx`
+- 头像 / 昵称 / 副标题改读真实 `user`（原写死「向野」，副标题改显邮箱）；底部加「退出登录」行 → `Auth.signOut()` → 门禁自动回登录页。
+
+### 验证
+- `npm run build` 通过（86 模块，JS 435.17 KB / gzip 127.22 KB，CSS 3.90 KB）；dev server 正常响应。
+- ⚠️ 上线注意：Supabase 默认开启邮箱确认（注册后需收邮件点链接才有 session）；要免确认直登可在 Supabase Auth 设置关掉。配合登录后，下一步可收紧 posts 表 RLS（步骤 25 遗留的开发期宽松策略）+ 把收藏/素材/对话/偏好等个人数据按 user 上云。
