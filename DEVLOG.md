@@ -455,3 +455,22 @@
 ---
 
 > 协作约定（2026-05-31 最新）：用户恢复**实时 push** —— 改完即提交并推到 `main`（步骤 20 / 26 确认）。此前「确认后再 push」的约定已解除。
+
+---
+
+## 步骤 27 · 交付物：对话一键「生成 MVP 项目卡」（补「交付能力」短板）
+
+> 起因：对照黑客松评分标准，「交付能力」最弱——产品聊完只停在对话/收藏，用户没拿到能动手的东西。这一步把对话沉淀成可带走的交付物，让叙事闭环（灵感 → 聊 → 交付）。
+
+### `agent.js`
+- 新增 `buildMVPCard(messages)`：把当前会话的 UI 消息拼成对话记录，喂给 `CHAT_MODEL`（守 JSON 稳）+ 强制 JSON，产出结构化项目卡 `{name, tagline, problem, audience, features[], mvp[], stack[]}`，对没聊透的部分合理补全。
+- 新增 `cardToMarkdown(card)`：序列化成 Markdown（标题 / 定位 / 痛点 / 用户 / 核心功能 / MVP 步骤 / 技术栈），供复制 / 下载。
+- 两者挂到 `Agent` 导出。
+
+### `AppAgent.jsx`
+- 新增 `MVPCardModal` + `CardSection` / `CardList`：暖黄衬线风弹窗展示项目卡；底部三动作 **复制 Markdown / 下载 .md / 存入收藏**（收藏走 `Store.addSaved` → 直接进「我的 → 收藏」，交付物与已有收藏闭环）。
+- 输入框上方新增「✦ 生成 MVP 卡片」入口，仅当会话里有用户消息时出现；生成中显示「整理中…」。
+- 新增轻提示 toast（复制 / 下载 / 收藏 / 报错反馈，2.4s 自动消失）。
+
+### 验证
+- `npm run build` 通过（84 模块，JS 428.71 KB / gzip 125.26 KB，CSS 3.90 KB）。复用既有 `gFade` / `histIn` 关键帧，无新增 CSS。

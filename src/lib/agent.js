@@ -158,4 +158,54 @@ async function runAgent(messages, { model = CHAT_MODEL, maxSteps = 4 } = {}) {
   return { say: finalText, options, usedJar };
 }
 
-export const Agent = { API_BASE, MODEL, SYNTH_MODEL, CHAT_MODEL, CONSTRAINTS, getKey, ensureKey, complete, parseJSON, synthesize, runAgent, pickRandom };
+// —— 交付物：把对话整理成一张「MVP 项目卡」——————————————————————
+// 让 builder 聊完能直接拿走一份可动手的方案，而不是停在对话里（呼应「灵感不再烂在收藏夹」）。
+const CARD_SYS = `你是产品落地助手。根据用户与产品搭子的这段共创对话，把讨论到的 idea 整理成一张「MVP 项目卡」，让 builder 拿了就能开干。
+只输出 json：
+{"name":"项目名(4-12字,响亮好记)","tagline":"一句话定位(<24字)","problem":"它解决什么痛点(一句话)","audience":"目标用户(一句话)","features":["核心功能/玩法,3-5条,每条<18字"],"mvp":["最小可行版本要做的事,3-5步,每步可执行"],"stack":["建议技术栈,3-6项,具体到框架/服务,不要泛泛说前端后端"]}
+基于已聊到的内容合理补全没聊透的部分；要具体、能落地，不要套话。`;
+
+// 入参是对话页的 UI 消息数组（role: 'user' | 'agent'，文本在 text / say）。
+export async function buildMVPCard(messages) {
+  const transcript = (messages || [])
+    .map((m) => {
+      const text = m.role === 'agent' ? (m.say ?? m.text) : m.text;
+      return text ? `${m.role === 'user' ? '用户' : '搭子'}：${String(text).trim()}` : '';
+    })
+    .filter(Boolean)
+    .join('\n');
+  if (!transcript.trim()) throw new Error('还没聊出什么内容，先和 Agent 多聊几句吧');
+  // 一次性结构化输出，用守 JSON 稳的对话模型；卡片质量优先，速度不敏感
+  const data = await complete(
+    [{ role: 'system', content: CARD_SYS }, { role: 'user', content: '对话记录：\n' + transcript + '\n\n把它整理成一张 MVP 项目卡。' }],
+    { json: true, temperature: 0.6, maxTokens: 1200, model: CHAT_MODEL },
+  );
+  const obj = parseJSON(data.choices?.[0]?.message?.content) || {};
+  const arr = (v) => (Array.isArray(v) ? v.filter(Boolean).map((x) => String(x).trim()) : []);
+  return {
+    name: (obj.name || '未命名项目').trim(),
+    tagline: (obj.tagline || '').trim(),
+    problem: (obj.problem || '').trim(),
+    audience: (obj.audience || '').trim(),
+    features: arr(obj.features),
+    mvp: arr(obj.mvp),
+    stack: arr(obj.stack),
+  };
+}
+
+// 把项目卡转成可复制 / 下载的 Markdown
+export function cardToMarkdown(c) {
+  const li = (a) => a.map((x) => `- ${x}`).join('\n');
+  return [
+    `# ${c.name}`,
+    c.tagline ? `> ${c.tagline}` : '',
+    c.problem ? `**解决的痛点**：${c.problem}` : '',
+    c.audience ? `**目标用户**：${c.audience}` : '',
+    c.features.length ? `\n## 核心功能\n${li(c.features)}` : '',
+    c.mvp.length ? `\n## MVP 怎么做\n${li(c.mvp)}` : '',
+    c.stack.length ? `\n## 建议技术栈\n${li(c.stack)}` : '',
+    `\n---\n*由「灵感搜集器」整理生成*`,
+  ].filter(Boolean).join('\n');
+}
+
+export const Agent = { API_BASE, MODEL, SYNTH_MODEL, CHAT_MODEL, CONSTRAINTS, getKey, ensureKey, complete, parseJSON, synthesize, runAgent, buildMVPCard, cardToMarkdown, pickRandom };
