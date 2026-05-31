@@ -6,7 +6,6 @@ import React from 'react';
 import { G } from '../theme.js';
 import { GIcon, GAvatar, GlowField } from './glow.jsx';
 import { Store, useStore } from '../store.js';
-import { Auth } from '../lib/auth.js';
 
 function fmtTime(ts) {
   if (!ts) return '';
@@ -167,9 +166,6 @@ export function AppMe() {
   const apiKey = useStore((s) => s.apiKey);
   const posts = useStore((s) => s.posts);
   const prefs = useStore((s) => s.prefs);
-  const user = useStore((s) => s.user);
-  const displayName = (user && user.name) || '匿名';
-  const initial = displayName.trim().charAt(0) || '灵';
 
   const [openSaved, setOpenSaved] = React.useState(false);
   const [openFragments, setOpenFragments] = React.useState(false);
@@ -238,11 +234,9 @@ export function AppMe() {
       <GlowField x="50%" y="16%" r={320} intensity={0.7} motes={13} />
       <div className="glow-scroll" style={{ position: 'relative', zIndex: 2, flex: 1, minHeight: 0, overflowY: 'auto' }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '22px 22px 0' }}>
-          <GAvatar size={78} ring glow initial={initial} />
-          <div style={{ fontFamily: G.serif, fontSize: 22, color: G.ink, marginTop: 16 }}>{displayName}</div>
-          <div style={{ fontSize: 12.5, color: G.inkSoft, marginTop: 5, letterSpacing: 0.3 }}>
-            {user && user.email ? user.email : 'builder'} · 灵感 Lv.{level}
-          </div>
+          <GAvatar size={78} ring glow initial="向" />
+          <div style={{ fontFamily: G.serif, fontSize: 22, color: G.ink, marginTop: 16 }}>向野</div>
+          <div style={{ fontSize: 12.5, color: G.inkSoft, marginTop: 5, letterSpacing: 0.3 }}>builder · 灵感 Lv.{level}</div>
           <div style={{ display: 'flex', alignItems: 'center', marginTop: 22 }}>
             {stats.map((s, i) => (
               <React.Fragment key={i}>
@@ -308,12 +302,6 @@ export function AppMe() {
               {r.expand}
             </div>
           ))}
-          {/* 退出登录：清空 user → App 门禁自动回到登录页 */}
-          <div className="gpress" onClick={() => Auth.signOut()} style={{ display: 'flex', alignItems: 'center',
-            padding: '16px 2px', borderTop: `1px solid ${G.hair2}`, cursor: 'pointer' }}>
-            <span style={{ fontSize: 14.5, color: '#C0492B', flex: 1 }}>退出登录</span>
-            <GIcon name="arrow" size={15} color={G.inkFaint} />
-          </div>
         </div>
       </div>
       <Toast msg={toastMsg} />

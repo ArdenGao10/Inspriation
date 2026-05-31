@@ -51,8 +51,6 @@ if (load('convVer', 0) !== CONV_VERSION) {
 }
 
 let state = {
-  user: load('user', null),       // 登录用户 { email, name }；未登录为 null。鉴权逻辑在 lib/auth.js
-  authReady: !hasSupabase,        // 鉴权是否就绪：mock 模式立即就绪；Supabase 模式等 getSession 回来
   apiKey: load('apiKey', ''),     // 用户在弹窗里填的 Key（agent 会优先用 .env 的 VITE_ZHIPU_KEY）
   fragments: load('fragments', SEED_FRAGMENTS).map((t, i) => typeof t === 'string' ? { id: 'seed' + i, text: t } : t),
   saved: load('saved', []),
@@ -67,7 +65,7 @@ let state = {
 
 const subs = new Set();
 const emit = () => subs.forEach((fn) => fn());
-const PERSIST = { user: 1, apiKey: 1, fragments: 1, saved: 1, conversations: 1, activeConvId: 1, posts: 1, prefs: 1 };
+const PERSIST = { apiKey: 1, fragments: 1, saved: 1, conversations: 1, activeConvId: 1, posts: 1, prefs: 1 };
 
 // 我赞过的帖子 id（本地个人态，不上云）；写云端时去掉本地专用的 liked 字段
 let likedIds = load('likedIds', []);
