@@ -5,7 +5,7 @@
 //      「帮我展开这个灵感：{title}」并调用智谱 API 展开，回复完成后 clearPendingIdea。
 import React from 'react';
 import { G } from '../theme.js';
-import { GIcon, GlowField } from './glow.jsx';
+import { GIcon } from './glow.jsx';
 import { Store, useStore, selectChat } from '../store.js';
 import { Agent } from '../lib/agent.js';
 
@@ -29,7 +29,7 @@ function UserBubble({ children }) {
   );
 }
 
-function AgentBubble({ children, maxW = '80%' }) {
+function AgentBubble({ children, maxW = '82%' }) {
   return (
     <div style={{ alignSelf: 'flex-start', display: 'flex', gap: 10, alignItems: 'flex-start', maxWidth: maxW }}>
       <div style={{ marginTop: 6 }}><GlowDot size={24} /></div>
@@ -383,8 +383,12 @@ export function AppAgent() {
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
       {/* 头部：收成一条细行 —— 闪烁星星 + 标题 + 副标题同排居中，少占垂直空间 */}
-      <div style={{ position: 'relative', overflow: 'hidden', zIndex: 2, padding: '11px 20px 9px' }}>
-        <GlowField x="50%" y="20%" r={130} intensity={0.42} motes={5} spread={0.7} />
+      <div style={{ position: 'relative', zIndex: 2, padding: '11px 20px 9px' }}>
+        {/* 标题背后的柔光：径向自然发散到透明，不裁切成条 */}
+        <div style={{ position: 'absolute', left: '50%', top: '50%', width: 300, height: 150, transform: 'translate(-50%,-50%)',
+          pointerEvents: 'none', zIndex: 0,
+          background: 'radial-gradient(55% 60% at 50% 50%, rgba(255,224,130,0.30) 0%, rgba(255,224,130,0.12) 40%, rgba(255,224,130,0) 72%)',
+          filter: 'blur(16px)', animation: 'glowBreathe 9s ease-in-out infinite' }} />
         {/* 左上角：历史对话 */}
         <span className="gpress" onClick={() => setShowHistory(true)} title="历史对话"
           style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', zIndex: 2,
