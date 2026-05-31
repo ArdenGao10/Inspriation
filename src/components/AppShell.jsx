@@ -62,7 +62,7 @@ export function AppShell({ active, onChange, children }) {
       <div className="app-shell glow">
         <SideNav active={active} onChange={onChange} />
         <div className="app-main">
-          <div style={{ flex: '0 0 auto', height: 'max(12px, env(safe-area-inset-top))' }} />
+          <div style={{ flex: '0 0 auto', height: 'env(safe-area-inset-top)' }} />
           <div className="app-content glow-scroll">{children}</div>
           <BottomNav active={active} onChange={onChange} />
         </div>

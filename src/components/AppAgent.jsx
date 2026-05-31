@@ -539,13 +539,15 @@ export function AppAgent() {
 
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
-      {/* 头部：收成一条细行 —— 闪烁星星 + 标题 + 副标题同排居中，少占垂直空间 */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 132, pointerEvents: 'none', zIndex: 0,
+        background: 'radial-gradient(115% 95% at 50% -18%, rgba(255,224,130,0.18) 0%, rgba(255,236,170,0.08) 48%, rgba(255,240,190,0) 86%)' }} />
+      {/* 头部：收成一条细行 —— 闪烁星星 + 标题同排居中，少占垂直空间 */}
       <div style={{ position: 'relative', zIndex: 2, padding: '11px 20px 9px' }}>
-        {/* 标题背后的柔光：亮心钉在顶边（top:0 + 上移一半，上半被裁），从最上沿扇下来盖住标题 */}
-        <div style={{ position: 'absolute', left: '50%', top: 0, width: 300, height: 150, transform: 'translate(-50%,-50%)',
+        {/* 标题背后的柔光：中心藏到顶边外侧，避免形成一条硬黄色色带。 */}
+        <div style={{ position: 'absolute', left: '50%', top: -34, width: 330, height: 150, transform: 'translateX(-50%)',
           pointerEvents: 'none', zIndex: 0,
-          background: 'radial-gradient(55% 60% at 50% 50%, rgba(255,224,130,0.30) 0%, rgba(255,224,130,0.12) 40%, rgba(255,224,130,0) 72%)',
-          filter: 'blur(16px)', animation: 'glowBreathe 9s ease-in-out infinite' }} />
+          background: 'radial-gradient(72% 92% at 50% 0%, rgba(255,224,130,0.20) 0%, rgba(255,224,130,0.08) 44%, rgba(255,224,130,0) 82%)',
+          filter: 'blur(20px)' }} />
         {/* 左上角：历史对话 */}
         <span className="gpress" onClick={() => setShowHistory(true)} title="历史对话"
           style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', zIndex: 2,
