@@ -297,6 +297,23 @@ function CardSection({ title, children }) {
   );
 }
 
+// 内联交付物入口：聊到一定轮次后，出现在最后一条 Agent 气泡末尾，让用户「自己选」要不要沉淀成卡片。
+function CardCTA({ loading, onClick }) {
+  return (
+    <div style={{ marginTop: 12, paddingTop: 11, borderTop: `1px dashed ${G.hair}` }}>
+      <div style={{ fontSize: 12, color: G.inkSoft, marginBottom: 7 }}>聊得差不多了？可以把它沉淀成一份能动手的方案 👇</div>
+      <button onClick={onClick} disabled={loading} className="gpress"
+        style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+          padding: '10px 14px', borderRadius: 12, cursor: loading ? 'default' : 'pointer',
+          border: `1px solid rgba(217,165,42,0.5)`, background: 'rgba(212,148,58,0.06)', color: G.gold,
+          fontSize: 13.5, fontWeight: 600, fontFamily: 'inherit' }}>
+        <GIcon name="spark" size={14} color={G.gold} sw={1.6} />
+        {loading ? '整理中…' : '生成 MVP 卡片'}
+      </button>
+    </div>
+  );
+}
+
 // 生成出的 MVP 项目卡弹窗：可复制 Markdown / 下载 .md / 存入收藏。
 function MVPCardModal({ card, onClose, onCopy, onDownload, onSave, saved }) {
   return (
@@ -514,6 +531,11 @@ export function AppAgent() {
   }, [messages, loading]);
 
   const canSend = draft.trim().length > 0 && !loading;
+  // 交付物入口出现条件：用户聊满 3 轮后，挂在「最后一条 Agent 气泡」末尾，让用户自己选要不要生成卡片
+  const userTurns = messages.reduce((n, m) => n + (m.role === 'user' ? 1 : 0), 0);
+  let lastAgentIdx = -1;
+  for (let i = messages.length - 1; i >= 0; i--) { if (messages[i].role === 'agent') { lastAgentIdx = i; break; } }
+  const showCardCTA = userTurns >= 3 && !loading;
 
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
@@ -552,23 +574,12 @@ export function AppAgent() {
             : <AgentBubble key={i}>
                 <AgentContent text={m.say ?? m.text} options={m.options} picked={m.picked}
                   onPick={(c) => handlePickDirection(i, c)} />
+                {showCardCTA && i === lastAgentIdx && <CardCTA loading={cardLoading} onClick={exportCard} />}
               </AgentBubble>
         ))}
         {loading && <AgentBubble><TypingDots /></AgentBubble>}
       </div>
       <div style={{ position: 'relative', zIndex: 3, padding: '10px 20px 14px', background: G.bg }}>
-        {/* 交付物入口：聊过之后出现，把对话整理成可带走的 MVP 项目卡 */}
-        {messages.some((m) => m.role === 'user') && (
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 9 }}>
-            <button onClick={exportCard} disabled={cardLoading} className="gpress"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 999, cursor: cardLoading ? 'default' : 'pointer',
-                border: `1px solid rgba(217,165,42,0.45)`, background: '#fff', color: G.gold, fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit',
-                boxShadow: '0 2px 8px rgba(217,165,42,0.12)' }}>
-              <GIcon name="spark" size={13} color={G.gold} sw={1.6} />
-              {cardLoading ? '整理中…' : '生成 MVP 卡片'}
-            </button>
-          </div>
-        )}
         <form onSubmit={(e) => { e.preventDefault(); submitDraft(); }}
           style={{ display: 'flex', alignItems: 'center', gap: 8, height: 46, borderRadius: 999, padding: '0 6px 0 18px',
           background: '#fff', border: `1px solid ${canSend ? 'rgba(217,165,42,0.5)' : G.hair}`,
