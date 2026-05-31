@@ -531,11 +531,11 @@ export function AppAgent() {
   }, [messages, loading]);
 
   const canSend = draft.trim().length > 0 && !loading;
-  // 交付物入口出现条件：用户聊满 3 轮后，挂在「最后一条 Agent 气泡」末尾，让用户自己选要不要生成卡片
+  // 交付物入口出现条件：用户聊满 2 轮后，挂在「最后一条 Agent 气泡」末尾，让用户自己选要不要生成卡片
   const userTurns = messages.reduce((n, m) => n + (m.role === 'user' ? 1 : 0), 0);
   let lastAgentIdx = -1;
   for (let i = messages.length - 1; i >= 0; i--) { if (messages[i].role === 'agent') { lastAgentIdx = i; break; } }
-  const showCardCTA = userTurns >= 3 && !loading;
+  const showCardCTA = userTurns >= 2 && lastAgentIdx >= 0 && !loading;
 
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>

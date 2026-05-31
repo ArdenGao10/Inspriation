@@ -483,3 +483,9 @@
 - 出现条件：`userTurns >= 3`（用户消息满 3 轮）且非 loading 时，**只挂在最后一条 Agent 气泡**末尾（`i === lastAgentIdx`），随对话推进自然下移、不重复。
 - 删掉原输入框上方那条居中按钮，输入区回归清爽。
 - `npm run build` 通过。
+
+## 步骤 29 · 登录/注册 + 入口门禁：做了又 revert（时间不够）
+
+> 加了一版登录/注册页 + 入口门禁（`lib/auth.js` + `AuthScreen.jsx`，Supabase 可选/本地回退，提交 `5eef8a2`）。实测注册时 Supabase 返回 **"Invalid API key"** —— 即 `.env` 配了 Supabase 但 `VITE_SUPABASE_ANON_KEY`（或 URL）失效/不对，走 Supabase Auth 被拒。
+> 临近 deadline 没时间排查 key，用户决定先停用。`git revert 5eef8a2`（→ `f10b6b2`）整体回退，应用恢复无需登录的可用状态。
+> 代码保留在历史里（`5eef8a2`），以后捡回时：先核对 `.env` 的 `VITE_SUPABASE_ANON_KEY` 是否为当前 Supabase 项目的有效 anon key，再 `git revert f10b6b2` 即可复活整套登录。

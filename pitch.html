@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>灵感搜集器 · Inspiration Collector — Pitch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&display=swap" rel="stylesheet" />
+<style>
+  /* ── 设计系统：取自产品 theme.js ───────────────────────────── */
+  :root{
+    --bg:#FDFBF4; --bg-warm:#FCF7EA; --ink:#2E2A20; --ink-soft:#7C7565;
+    --ink-faint:#B6AE9C; --hair:rgba(70,58,30,0.10); --hair2:rgba(70,58,30,0.06);
+    --gold:#D9A52A; --gold-soft:#EBC766;
+    --serif:"Newsreader","Songti SC","Source Han Serif SC",Georgia,serif;
+    --sans:"PingFang SC","Hiragino Sans GB","Segoe UI",system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-font-smoothing:antialiased;}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);}
+  body{overflow:hidden;}
+
+  /* ── 舞台 ─────────────────────────────────────────────────── */
+  #deck{position:fixed;inset:0;overflow:hidden;}
+  .slide{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    padding:clamp(28px,5vw,76px) clamp(24px,7vw,110px);
+    opacity:0;visibility:hidden;transform:translateY(14px) scale(0.992);
+    transition:opacity .6s ease,transform .6s ease,visibility .6s;
+    overflow:hidden;
+  }
+  .slide.active{opacity:1;visibility:visible;transform:none;z-index:2;}
+  .slide.active .rise{animation:rise .7s cubic-bezier(.2,.7,.2,1) both;}
+  .slide.active .rise:nth-child(2){animation-delay:.06s}
+  .slide.active .rise:nth-child(3){animation-delay:.12s}
+  .slide.active .rise:nth-child(4){animation-delay:.18s}
+  .slide.active .rise:nth-child(5){animation-delay:.24s}
+  @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+
+  /* ── 光晕 / 太阳 + 漂浮粒子 ────────────────────────────────── */
+  .glow{position:absolute;border-radius:50%;pointer-events:none;filter:blur(22px);
+    background:radial-gradient(circle,rgba(255,224,130,0.55) 0%,rgba(255,236,170,0.30) 26%,rgba(255,240,190,0.10) 48%,rgba(255,240,190,0) 70%);
+    animation:breathe 9s ease-in-out infinite;}
+  @keyframes breathe{0%,100%{transform:scale(1);opacity:.85}50%{transform:scale(1.08);opacity:1}}
+  .motes{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0;}
+  .mote{position:absolute;border-radius:50%;
+    background:radial-gradient(circle,rgba(255,231,150,0.95) 0%,rgba(255,213,96,0.35) 55%,rgba(255,213,96,0) 75%);}
+  @keyframes drift{0%{transform:translate(0,0);opacity:0}10%{opacity:var(--o)}90%{opacity:var(--o)}100%{transform:translate(var(--dx),var(--dy));opacity:0}}
+  @keyframes twinkle{0%,100%{opacity:.15;transform:scale(.8)}50%{opacity:var(--o);transform:scale(1.1)}}
+
+  .stage{position:relative;z-index:3;flex:1;display:flex;flex-direction:column;min-height:0;}
+
+  /* ── 文字 atoms ───────────────────────────────────────────── */
+  .eyebrow{font-size:clamp(10px,1vw,12px);letter-spacing:.22em;text-transform:uppercase;
+    color:var(--gold);font-weight:600;display:inline-flex;align-items:center;gap:9px;}
+  .eyebrow::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--gold);
+    box-shadow:0 0 10px 2px rgba(217,165,42,.55);}
+  h1{font-family:var(--serif);font-weight:500;line-height:1.12;margin:0;letter-spacing:.01em;}
+  h2{font-family:var(--serif);font-weight:500;line-height:1.16;margin:0;letter-spacing:.01em;
+    font-size:clamp(28px,4.4vw,52px);}
+  .ital{font-style:italic;color:var(--gold);}
+  .lead{color:var(--ink-soft);font-size:clamp(14px,1.5vw,18.5px);line-height:1.65;max-width:54ch;}
+  .serif{font-family:var(--serif);}
+  .hand{margin-top:6px;height:9px;width:200px;}
+
+  /* ── 卡片 ─────────────────────────────────────────────────── */
+  .grid{display:grid;gap:clamp(14px,1.6vw,22px);}
+  .card{position:relative;background:rgba(255,253,247,0.72);border:1px solid var(--hair);
+    border-radius:18px;padding:clamp(16px,1.8vw,24px);backdrop-filter:blur(4px);
+    box-shadow:0 10px 30px rgba(120,90,30,0.05);}
+  .card .k{font-family:var(--serif);font-size:clamp(17px,1.8vw,21px);color:var(--ink);margin:0 0 6px;}
+  .card .d{font-size:clamp(12.5px,1.15vw,14px);line-height:1.6;color:var(--ink-soft);margin:0;}
+  .ico{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;margin-bottom:13px;
+    background:#FBEFD6;box-shadow:inset 0 0 0 1px rgba(217,165,42,.22);}
+  .ico svg{width:23px;height:23px;}
+  .tag{display:inline-block;font-size:12px;color:var(--ink-soft);padding:4px 11px;border-radius:999px;
+    background:#fff;border:1px solid var(--hair);margin:4px 6px 0 0;}
+  .pill{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--gold);font-weight:600;
+    padding:6px 13px;border-radius:999px;background:rgba(212,148,58,0.07);border:1px solid rgba(217,165,42,.3);}
+
+  /* ── 流程 ─────────────────────────────────────────────────── */
+  .flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;}
+  .step{flex:1;min-width:150px;text-align:center;padding:0 6px;}
+  .step .orb{width:60px;height:60px;border-radius:50%;margin:0 auto 14px;display:grid;place-items:center;position:relative;
+    background:radial-gradient(125% 105% at 36% 22%,rgba(255,255,255,.7),rgba(255,235,176,.5) 64%,rgba(248,222,150,.7));
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.5),0 8px 22px rgba(195,150,55,.18);}
+  .step .orb svg{width:28px;height:28px;}
+  .step .n{font-family:var(--serif);font-style:italic;color:var(--gold);font-size:13px;}
+  .step .t{font-family:var(--serif);font-size:clamp(15px,1.5vw,18px);margin:3px 0 5px;}
+  .step .s{font-size:12px;color:var(--ink-soft);line-height:1.5;}
+  .arrow{align-self:flex-start;margin-top:24px;color:var(--gold);opacity:.6;font-size:22px;flex:0 0 auto;width:26px;text-align:center;}
+
+  /* ── 评分轴 ───────────────────────────────────────────────── */
+  .score-row{display:flex;align-items:center;gap:16px;padding:13px 0;border-bottom:1px solid var(--hair2);}
+  .score-row:last-child{border-bottom:none;}
+  .score-badge{flex:0 0 auto;width:54px;height:54px;border-radius:14px;display:grid;place-items:center;
+    font-family:var(--serif);font-weight:600;color:var(--gold);background:#FBEFD6;font-size:13px;line-height:1.1;text-align:center;
+    box-shadow:inset 0 0 0 1px rgba(217,165,42,.22);}
+  .score-row .name{font-family:var(--serif);font-size:clamp(15px,1.5vw,18px);margin:0 0 2px;}
+  .score-row .ans{font-size:clamp(12px,1.15vw,13.5px);color:var(--ink-soft);line-height:1.55;margin:0;}
+  .score-row b{color:var(--ink);font-weight:600;}
+
+  /* ── Demo 视频 ────────────────────────────────────────────── */
+  .video-wrap{position:relative;flex:1;min-height:0;border-radius:22px;overflow:hidden;
+    border:1px solid var(--hair);background:linear-gradient(160deg,#FFFDF7,#FCF4E2);
+    box-shadow:0 24px 60px rgba(195,150,55,.14);display:grid;place-items:center;}
+  .video-wrap video{width:100%;height:100%;object-fit:contain;background:#000;}
+  .play{position:relative;text-align:center;}
+  .play .btn{width:88px;height:88px;border-radius:50%;margin:0 auto 18px;display:grid;place-items:center;cursor:pointer;
+    background:radial-gradient(circle,#fff,rgba(255,235,176,.7));box-shadow:0 12px 32px rgba(195,150,55,.3);
+    transition:transform .2s ease;}
+  .play .btn:hover{transform:scale(1.06);}
+  .play .btn svg{width:34px;height:34px;margin-left:5px;}
+  .play .hint{font-size:13px;color:var(--ink-soft);}
+  .play code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--gold);
+    background:rgba(212,148,58,.08);padding:2px 8px;border-radius:6px;}
+
+  /* ── 底部进度 ─────────────────────────────────────────────── */
+  #nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;align-items:center;justify-content:center;
+    gap:10px;padding:16px;pointer-events:none;}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--ink-faint);opacity:.4;cursor:pointer;pointer-events:auto;
+    transition:all .3s ease;}
+  .dot.on{opacity:1;background:var(--gold);width:22px;border-radius:999px;box-shadow:0 0 10px 1px rgba(217,165,42,.5);}
+  .edge{position:fixed;top:0;bottom:0;width:14vw;max-width:160px;z-index:25;cursor:pointer;}
+  .edge.l{left:0;} .edge.r{right:0;}
+  #count{position:fixed;right:clamp(18px,4vw,46px);top:clamp(18px,4vw,40px);z-index:30;
+    font-family:var(--serif);font-size:13px;color:var(--ink-faint);letter-spacing:.05em;}
+  #count b{color:var(--gold);font-size:16px;}
+
+  /* logo lockup */
+  .brand{display:inline-flex;align-items:center;gap:11px;}
+  .brand .jar{width:30px;height:38px;position:relative;}
+  .hide-sm{}
+  @media (max-width:680px){
+    .grid.c4{grid-template-columns:1fr 1fr!important;}
+    .grid.c3{grid-template-columns:1fr!important;}
+    .flow{gap:18px;} .arrow{display:none;}
+    .step{min-width:44%;}
+  }
+</style>
+</head>
+<body>
+<div id="deck">
+
+  <!-- ① 封面 ───────────────────────────────────────────────── -->
+  <section class="slide" data-bg="hero">
+    <div class="stage" style="justify-content:center;align-items:center;text-align:center;">
+      <div class="rise brand" style="margin-bottom:30px;">
+        <svg class="jar" viewBox="0 0 30 38" fill="none">
+          <rect x="9" y="0.5" width="12" height="4.5" rx="2" fill="#EFE6CE" stroke="rgba(217,165,42,.4)" stroke-width=".8"/>
+          <path d="M5 9 h20 v20 a4 4 0 0 1-4 4 H9 a4 4 0 0 1-4-4 Z" fill="url(#jg)" stroke="rgba(217,165,42,.45)" stroke-width="1"/>
+          <circle cx="11" cy="24" r="1.4" fill="#F2C24B"/><circle cx="18" cy="20" r="1.1" fill="#F7D572"/><circle cx="16" cy="27" r="1.3" fill="#EFB733"/>
+          <defs><linearGradient id="jg" x1="5" y1="9" x2="25" y2="33" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#F9E2A4" stop-opacity=".5"/></linearGradient></defs>
+        </svg>
+        <span class="eyebrow" style="letter-spacing:.26em;">Inspiration Collector</span>
+      </div>
+      <h1 class="rise" style="font-size:clamp(40px,8vw,92px);">灵感搜集器</h1>
+      <p class="rise serif" style="font-size:clamp(18px,2.6vw,30px);color:var(--ink-soft);margin:18px 0 0;font-style:italic;">
+        把零散的灵感，<span class="ital">碰撞</span>成能动手的方案
+      </p>
+      <div class="rise" style="display:flex;gap:12px;margin-top:34px;flex-wrap:wrap;justify-content:center;">
+        <span class="pill">灵感 Agent · 共创搭子</span>
+        <span class="tag" style="margin:0;">给 builder</span>
+        <span class="tag" style="margin:0;">智谱 GLM-4.6 驱动</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ② 痛点 ───────────────────────────────────────────────── -->
+  <section class="slide" data-bg="left">
+    <div class="stage">
+      <div class="rise eyebrow">The Pain · 我们盯的痛点</div>
+      <h2 class="rise" style="margin-top:16px;max-width:18ch;">想法很多，<br>但几乎都<span class="ital">烂在收藏夹里</span></h2>
+      <p class="rise lead" style="margin-top:16px;">
+        每个爱折腾的人都攒着一堆碎想法 —— 截图、灵感、半句话。可它们各自躺着，
+        从来没被「连起来」，更没人陪你把一句话推到能开工的那一步。
+      </p>
+      <div class="rise grid c3" style="grid-template-columns:repeat(3,1fr);margin-top:auto;">
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#D9A52A" stroke-width="1.5" stroke-linecap="round"><path d="M4 5h16M4 12h16M4 19h10"/></svg></div>
+          <p class="k">灵感是散的</p>
+          <p class="d">几十条碎片各自躺着，越攒越焦虑，从没产生过一次「化学反应」。</p>
+        </div>
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#D9A52A" stroke-width="1.5" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 12h6"/></svg></div>
+          <p class="k">开头最难</p>
+          <p class="d">面对空白页不知从哪下手；一个念头还没成形，热情就先凉了。</p>
+        </div>
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#D9A52A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M5 12H3M21 12h-2M6 6l1.5 1.5M18 18l-1.5-1.5"/><circle cx="12" cy="12" r="3.2"/></svg></div>
+          <p class="k">聊完没下文</p>
+          <p class="d">和 AI 聊一圈，收获一堆文字，却没有一份能照着动手做的东西。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ③ 解法概览 / 核心流程 ─────────────────────────────────── -->
+  <section class="slide" data-bg="center">
+    <div class="stage">
+      <div class="rise eyebrow">The Idea · 一句话说清</div>
+      <h2 class="rise" style="margin-top:16px;">一个会<span class="ital">陪你想</span>、还帮你<span class="ital">交付</span>的灵感 Agent</h2>
+      <p class="rise lead" style="margin-top:14px;">
+        把碎灵感丢进「灵感罐」，摇一摇让 AI 碰撞出新点子；再和 Agent 一步步聊，
+        最后沉淀成一张能照着做的 <b>MVP 项目卡</b>。
+      </p>
+      <div class="rise flow" style="margin-top:auto;">
+        <div class="step">
+          <div class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="#D9A52A" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 7h10.8v9.4a2.6 2.6 0 0 1-2.6 2.6H9.2a2.6 2.6 0 0 1-2.6-2.6Z M8.3 7V5a1.2 1.2 0 0 1 1.2-1.2h5a1.2 1.2 0 0 1 1.2 1.2v2 M8.4 13q3.6 1.6 7.2 0"/></svg></div>
+          <div class="n">01</div><div class="t">攒进罐子</div>
+          <div class="s">日常零散灵感<br>沉淀成「素材」</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="step">
+          <div class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="#D9A52A" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2c.35 4 2 5.65 6 6-4 .35-5.65 2-6 6-.35-4-2-5.65-6-6 4-.35 5.65-2 6-6Z"/></svg></div>
+          <div class="n">02</div><div class="t">摇一摇合成</div>
+          <div class="s">抽 2–3 条碰撞<br>生成全新点子</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="step">
+          <div class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="#D9A52A" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9.2 11.2a2.7 2.7 0 1 0 0-5.4 2.7 2.7 0 0 0 0 5.4Z M3.8 18.6c0-3 2.4-5 5.4-5s5.4 2 5.4 5 M15.6 6.1a2.6 2.6 0 0 1 0 5.1"/></svg></div>
+          <div class="n">03</div><div class="t">对话展开</div>
+          <div class="s">Agent 当搭子<br>一步步聊明白</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="step">
+          <div class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="#D9A52A" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h9l3 3v13H6z M9 11h6M9 15h6M9 7h3"/></svg></div>
+          <div class="n">04</div><div class="t">交付 MVP 卡</div>
+          <div class="s">痛点·功能·步骤<br>一键带走</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ④ 核心功能 ───────────────────────────────────────────── -->
+  <section class="slide" data-bg="left">
+    <div class="stage">
+      <div class="rise eyebrow">Features · 产品功能</div>
+      <h2 class="rise" style="margin-top:16px;">四个空间，<span class="ital">一条灵感的完整旅程</span></h2>
+      <div class="rise grid c4" style="grid-template-columns:repeat(4,1fr);margin-top:30px;flex:1;align-content:center;">
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#D9A52A" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 7h10.8v9.4a2.6 2.6 0 0 1-2.6 2.6H9.2a2.6 2.6 0 0 1-2.6-2.6Z M8.3 7V5a1.2 1.2 0 0 1 1.2-1.2h5a1.2 1.2 0 0 1 1.2 1.2v2 M8.4 13q3.6 1.6 7.2 0"/></svg></div>
+          <p class="k">灵感罐</p>
+          <p class="d">玻璃罐养着你的碎灵感，摇一摇 → AI 实时碰撞合成新点子，可收藏回灌。</p>
+        </div>
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#D9A52A" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2c.35 4 2 5.65 6 6-4 .35-5.65 2-6 6-.35-4-2-5.65-6-6 4-.35 5.65-2 6-6Z"/></svg></div>
+          <p class="k">对话 Agent</p>
+          <p class="d">像产品搭子一样共创：每轮推进一小步，给可点的方向卡，多会话留存。</p>
+        </div>
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#D9A52A" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9.2 11.2a2.7 2.7 0 1 0 0-5.4 2.7 2.7 0 0 0 0 5.4Z M3.8 18.6c0-3 2.4-5 5.4-5s5.4 2 5.4 5 M15.6 6.1a2.6 2.6 0 0 1 0 5.1 M16.4 13.8c2.5.3 3.9 2.2 3.9 4.8"/></svg></div>
+          <p class="k">社区</p>
+          <p class="d">晒成品、抛灵感接力；看到喜欢的，一键「让 Agent 展开它」跨页接力。</p>
+        </div>
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#D9A52A" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11.8a3.6 3.6 0 1 0 0-7.2 3.6 3.6 0 0 0 0 7.2ZM5 19.6c0-3.3 3-5.6 7-5.6s7 2.3 7 5.6"/></svg></div>
+          <p class="k">我的</p>
+          <p class="d">收藏的灵感、灵感罐素材、生成过的 MVP 卡，都在这里沉淀成你的资产。</p>
+        </div>
+      </div>
+      <p class="rise lead" style="margin-top:6px;font-size:14px;">
+        四个 Tab 常驻、状态不丢 —— 灵感从「冒出来」到「做出来」，全程不掉线。
+      </p>
+    </div>
+  </section>
+
+  <!-- ⑤ 受众人群 ───────────────────────────────────────────── -->
+  <section class="slide" data-bg="right">
+    <div class="stage">
+      <div class="rise eyebrow">Who · 受众人群</div>
+      <h2 class="rise" style="margin-top:16px;">写给那些<span class="ital">手痒、想做点东西</span>的人</h2>
+      <div class="rise grid c3" style="grid-template-columns:repeat(3,1fr);margin-top:34px;flex:1;align-content:center;">
+        <div class="card">
+          <span class="pill">主力人群</span>
+          <p class="k" style="margin-top:14px;">Builder</p>
+          <p class="d">能用 AI 快速搓出 demo，但常卡在「做什么」。需要的是点子，不是教程。</p>
+        </div>
+        <div class="card">
+          <span class="pill">创意工作者</span>
+          <p class="k" style="margin-top:14px;">产品 / 设计 / 内容人</p>
+          <p class="d">脑子里灵感不断，缺一个帮自己梳理、碰撞、定方向的「思维搭子」。</p>
+        </div>
+        <div class="card">
+          <span class="pill">学生 / 参赛者</span>
+          <p class="k" style="margin-top:14px;">Hackathon &amp; 课程项目</p>
+          <p class="d">要在短时间里从 0 想到一个能落地的题目，并快速产出可交付的方案。</p>
+        </div>
+      </div>
+      <p class="rise lead" style="margin-top:8px;">
+        共同点：<b>灵感不缺，缺的是把它推到「能开工」那一步的陪伴与交付。</b>
+      </p>
+    </div>
+  </section>
+
+  <!-- ⑥ 交付能力（差异点） ─────────────────────────────────── -->
+  <section class="slide" data-bg="center">
+    <div class="stage" style="flex-direction:row;gap:clamp(24px,4vw,60px);align-items:center;flex-wrap:wrap;">
+      <div class="rise" style="flex:1;min-width:280px;">
+        <div class="eyebrow">Delivery · 不止聊，更交付</div>
+        <h2 style="margin-top:16px;">聊到位了，<br><span class="ital">一键带走一份方案</span></h2>
+        <p class="lead" style="margin-top:16px;">
+          这是我们和「聊天机器人」最大的不一样 —— 聊满几轮后，Agent 会主动把对话
+          沉淀成一张 <b>MVP 项目卡</b>：痛点、目标用户、核心功能、可执行步骤、建议技术栈。
+        </p>
+        <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;">
+          <span class="tag" style="margin:0;">复制 Markdown</span>
+          <span class="tag" style="margin:0;">下载 .md</span>
+          <span class="tag" style="margin:0;">存入收藏</span>
+        </div>
+        <p class="lead" style="margin-top:18px;font-size:14.5px;">
+          用户离开时手里有的不是聊天记录，而是<b>一份能直接开工的交付物</b>。
+        </p>
+      </div>
+      <!-- MVP 卡 mockup -->
+      <div class="rise card" style="flex:0 0 340px;max-width:92vw;padding:24px;box-shadow:0 24px 60px rgba(195,150,55,.16);">
+        <div class="eyebrow" style="font-size:10px;letter-spacing:.2em;">MVP 项目卡</div>
+        <div class="serif" style="font-size:24px;margin:10px 0 4px;">方言会议助手</div>
+        <p class="d" style="font-size:13px;">给听不清普通话的长辈，把会议实时转成方言要点。</p>
+        <div style="margin-top:14px;padding:12px 14px;border-radius:12px;background:var(--bg-warm);border:1px solid var(--hair);">
+          <p class="d" style="color:var(--ink);font-size:13px;margin:0 0 6px;"><b style="color:var(--gold);">痛点 ·</b> 方言人群被会议信息流挡在门外</p>
+          <p class="d" style="color:var(--ink);font-size:13px;margin:0;"><b style="color:var(--gold);">用户 ·</b> 家里的长辈、方言区上班族</p>
+        </div>
+        <div class="eyebrow" style="font-size:9.5px;letter-spacing:.18em;margin-top:16px;">MVP 怎么做</div>
+        <div style="margin-top:9px;display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;gap:9px;align-items:flex-start;"><span class="score-badge" style="width:20px;height:20px;border-radius:50%;font-size:11px;">1</span><span class="d" style="font-size:13px;color:var(--ink);">接入语音转写 + 方言 TTS</span></div>
+          <div style="display:flex;gap:9px;align-items:flex-start;"><span class="score-badge" style="width:20px;height:20px;border-radius:50%;font-size:11px;">2</span><span class="d" style="font-size:13px;color:var(--ink);">实时摘要成 3 条要点</span></div>
+          <div style="display:flex;gap:9px;align-items:flex-start;"><span class="score-badge" style="width:20px;height:20px;border-radius:50%;font-size:11px;">3</span><span class="d" style="font-size:13px;color:var(--ink);">长辈端只读卡片 UI</span></div>
+        </div>
+        <div style="margin-top:16px;">
+          <span class="tag">智谱 GLM</span><span class="tag">Whisper</span><span class="tag">React</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑦ 技术 + 稀缺性 ─────────────────────────────────────── -->
+  <section class="slide" data-bg="left">
+    <div class="stage">
+      <div class="rise eyebrow">Under the hood · 怎么做到的 &amp; 凭什么是我们</div>
+      <h2 class="rise" style="margin-top:16px;">把 LLM 用在<span class="ital">刀刃上</span></h2>
+      <div class="rise grid c3" style="grid-template-columns:repeat(3,1fr);margin-top:30px;flex:1;align-content:center;">
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#D9A52A" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2c.35 4 2 5.65 6 6-4 .35-5.65 2-6 6-.35-4-2-5.65-6-6 4-.35 5.65-2 6-6Z"/></svg></div>
+          <p class="k">真 Agent，不是套壳</p>
+          <p class="d">GLM-4.6 多步 tool-use 循环：<b>read_jar</b> 读你真实素材、<b>save_idea</b> 落库，每轮只推进一小步。</p>
+        </div>
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#D9A52A" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
+          <p class="k">结构化输出</p>
+          <p class="d">方向卡、MVP 卡都由模型返回结构化字段驱动，前端稳定渲染，省 token 不靠瞎猜正则。</p>
+        </div>
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#D9A52A" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"/></svg></div>
+          <p class="k">轻、快、能部署</p>
+          <p class="d">Vite + React 18，极简 store + localStorage 持久化；规划 Vercel 部署、Supabase 藏 Key 代理。</p>
+        </div>
+      </div>
+      <p class="rise lead" style="margin-top:8px;">
+        市面同类多停在「灵感生成器」一锤子买卖。我们的优势是把
+        <b>「碰撞 → 共创 → 交付」串成一条线</b>，让灵感真正走完最后一公里。
+      </p>
+    </div>
+  </section>
+
+  <!-- ⑧ Demo 视频 ─────────────────────────────────────────── -->
+  <section class="slide" data-bg="center">
+    <div class="stage">
+      <div class="rise eyebrow">Live Demo · 看它跑起来</div>
+      <h2 class="rise" style="margin:14px 0 18px;">摇一摇 → 共创 → <span class="ital">交付</span>，一镜到底</h2>
+      <div class="rise video-wrap">
+        <!-- 把演示视频放进项目，改这里的 src 即可（支持本地文件或链接） -->
+        <video id="demoVideo" controls playsinline preload="metadata" poster="" style="display:none;"></video>
+        <div class="play" id="demoPlaceholder">
+          <div class="btn" onclick="document.getElementById('videoPick').click()">
+            <svg viewBox="0 0 24 24" fill="#D9A52A"><path d="M8 5v14l11-7z"/></svg>
+          </div>
+          <p class="hint">点此选择本地 Demo 视频播放，或把文件命名为 <code>demo.mp4</code> 放到本目录</p>
+          <input id="videoPick" type="file" accept="video/*" style="display:none;" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑩ 结语 ─────────────────────────────────────────────── -->
+  <section class="slide" data-bg="hero">
+    <div class="stage" style="justify-content:center;align-items:center;text-align:center;">
+      <div class="rise eyebrow" style="letter-spacing:.26em;">Thanks</div>
+      <h1 class="rise" style="font-size:clamp(34px,6.5vw,72px);margin-top:22px;max-width:16ch;">
+        让每一个想法，<br>都有<span class="ital">被做出来</span>的机会
+      </h1>
+      <p class="rise serif" style="font-style:italic;color:var(--ink-soft);font-size:clamp(16px,2vw,22px);margin-top:20px;">
+        灵感搜集器 · Inspiration Collector
+      </p>
+      <div class="rise" style="margin-top:30px;">
+        <span class="pill">摇一摇，合成新灵感 ✨</span>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div id="count"></div>
+<div id="nav"></div>
+<div class="edge l" onclick="go(idx-1)"></div>
+<div class="edge r" onclick="go(idx+1)"></div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const nav = document.getElementById('nav');
+  const count = document.getElementById('count');
+  let idx = 0;
+
+  // 每页生成柔光 + 漂浮粒子，复刻产品的「太阳 / 光晕」质感
+  const bgPos = {
+    hero:   [['50%','34%',760],['50%','34%',360]],
+    left:   [['16%','22%',620]],
+    right:  [['86%','26%',620]],
+    center: [['50%','20%',680]],
+  };
+  slides.forEach(s=>{
+    const kind = s.dataset.bg || 'center';
+    (bgPos[kind]||bgPos.center).forEach(([x,y,r])=>{
+      const g=document.createElement('div'); g.className='glow';
+      g.style.cssText=`left:${x};top:${y};width:${r}px;height:${r}px;transform:translate(-50%,-50%);`;
+      s.insertBefore(g,s.firstChild);
+    });
+    const m=document.createElement('div'); m.className='motes';
+    const n = 16;
+    for(let i=0;i<n;i++){
+      const big=Math.random()<0.3, sp=document.createElement('span'); sp.className='mote';
+      const size= big?14+Math.random()*22:3+Math.random()*6;
+      const o=(big?0.16+Math.random()*0.18:0.4+Math.random()*0.4);
+      const drift=Math.random()<0.5;
+      sp.style.cssText=`left:${4+Math.random()*92}%;top:${6+Math.random()*86}%;width:${size}px;height:${size}px;`+
+        `filter:blur(${big?8+Math.random()*8:1+Math.random()*3}px);--o:${o};opacity:${o};`+
+        `--dx:${(Math.random()*2-1)*22}px;--dy:${-(20+Math.random()*40)}px;`+
+        `animation:${drift?'drift':'twinkle'} ${(drift?7+Math.random()*9:5+Math.random()*5)}s ${drift?'linear':'ease-in-out'} ${-Math.random()*14}s infinite;`;
+      m.appendChild(sp);
+    }
+    s.insertBefore(m,s.firstChild);
+    const d=document.createElement('div'); d.className='dot'; d.onclick=()=>go(slides.indexOf(s)); nav.appendChild(d);
+  });
+  const dots=Array.from(nav.children);
+
+  function go(i){
+    i=Math.max(0,Math.min(slides.length-1,i));
+    if(i===idx && slides[idx].classList.contains('active')) return;
+    slides[idx].classList.remove('active');
+    idx=i;
+    slides[idx].classList.add('active');
+    dots.forEach((d,j)=>d.classList.toggle('on',j===idx));
+    count.innerHTML=`<b>${String(idx+1).padStart(2,'0')}</b> / ${String(slides.length).padStart(2,'0')}`;
+  }
+  document.addEventListener('keydown',e=>{
+    if(['ArrowRight','ArrowDown',' ','PageDown'].includes(e.key)){e.preventDefault();go(idx+1);}
+    if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();go(idx-1);}
+    if(e.key==='Home')go(0); if(e.key==='End')go(slides.length-1);
+  });
+  // 触屏滑动
+  let tx=0; addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
+  addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-tx; if(Math.abs(dx)>60)go(idx+(dx<0?1:-1));},{passive:true});
+
+  // Demo 视频：选了本地文件就播放；否则尝试同目录 demo.mp4
+  const vid=document.getElementById('demoVideo'), ph=document.getElementById('demoPlaceholder'), pick=document.getElementById('videoPick');
+  pick.addEventListener('change',e=>{
+    const f=e.target.files[0]; if(!f)return;
+    vid.src=URL.createObjectURL(f); vid.style.display='block'; ph.style.display='none'; vid.play();
+  });
+  // 若本目录存在 demo.mp4，自动挂上
+  fetch('demo.mp4',{method:'HEAD'}).then(r=>{if(r.ok){vid.src='demo.mp4';vid.style.display='block';ph.style.display='none';}}).catch(()=>{});
+
+  go(0);
+</script>
+</body>
+</html>
