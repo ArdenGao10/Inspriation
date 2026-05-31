@@ -14,3 +14,4 @@ dist-ssr
 # 系统/编辑器杂项
 .DS_Store
 *.log
+.vercel
