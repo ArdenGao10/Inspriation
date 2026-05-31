@@ -441,6 +441,17 @@
 - 安全提醒：当前 RLS policy 是开发期宽松（anon 可读写）。上线前要收紧（配合登录）。
 - `npm run build` 通过（bundle 因 supabase-js 增大到 ~415KB，后续可按需优化）。
 
+## 步骤 26 · 对话气泡宽度对齐 + 头部柔光改径向
+
+> 用户反馈：Agent 回复气泡和用户气泡宽度不一致，看着别扭。
+
+- `AppAgent.jsx`：`AgentBubble` 默认 `maxW` `80%` → `82%`，和 `UserBubble` 的 `maxWidth: 82%` 对齐，两侧对话框最大宽度一致。
+  - 注：Agent 气泡左侧有发光圆点（24px）+ 间距（10px）占约 34px，纯文字框仍比用户气泡略窄；如需文字框完全等宽可改 `calc(82% + 34px)`，本步先按容器等宽处理。
+- 头部柔光：`GlowField`（`overflow:hidden` 裁成条）→ 改成径向渐变 `radial-gradient` + `blur(16px)` + `glowBreathe` 呼吸动画，自然发散到透明、不再被裁成硬边条；顺手去掉 `import { GlowField }`。
+- 已实时 push 到 `main`（`c852701`）。
+
+> ⚠️ 远端仓库已迁移：`Irene-bloom/Inspriation` → `ArdenGao10/Inspriation.git`（push 仍经旧地址转发成功，建议适时 `git remote set-url` 更新）。
+
 ---
 
-> ⚠️ 协作约定（2026-05-31 起）：功能未经用户亲自确认前**不要 push**，只在本地改 + 写 DEVLOG；等用户说「可以下一步」再一次性 push。
+> 协作约定（2026-05-31 最新）：用户恢复**实时 push** —— 改完即提交并推到 `main`（步骤 20 / 26 确认）。此前「确认后再 push」的约定已解除。
