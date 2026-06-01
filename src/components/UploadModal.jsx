@@ -1,16 +1,37 @@
 // UploadModal.jsx — 多模态素材上传弹窗：文本 / 链接（每行一条）+ 图片。
-// 提交后逐条写入灵感罐（Store.addFragments），「灵感罐」计数实时增加。
-// 注：图片暂以「图片素材：文件名」记入；真正的图片存储待接 Supabase Storage。
+// 提交后逐条写入灵感罐（Store.addFragments）并带类型：链接自动识别成 link，
+// 图片缩放后以 dataURL 存进 image 素材（localStorage 持久化，免依赖后端 Storage）。
 import React from 'react';
 import { G } from '../theme.js';
 import { Store, useStore } from '../store.js';
 import { GIcon } from './glow.jsx';
 
+// 读图片 → 等比缩放到最长边 max → 转 JPEG dataURL，控制 localStorage 体积。
+function fileToThumb(file, max = 900) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        try { resolve(canvas.toDataURL('image/jpeg', 0.72)); } catch { resolve(reader.result); }
+      };
+      img.onerror = () => resolve(reader.result);
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 export function UploadModal() {
   const open = useStore((s) => s.showUpload);
   const count = useStore((s) => s.fragments.length);
   const [text, setText] = React.useState('');
-  const [images, setImages] = React.useState([]); // 文件名列表
+  const [images, setImages] = React.useState([]); // [{ name, url(dataURL) }]
   const [justAdded, setJustAdded] = React.useState(0);
   React.useEffect(() => { if (open) { setText(''); setImages([]); setJustAdded(0); } }, [open]);
   if (!open) return null;
@@ -19,13 +40,18 @@ export function UploadModal() {
   const lines = text.split('\n').map((s) => s.trim()).filter(Boolean);
   const total = lines.length + images.length;
 
-  const onPickImages = (e) => {
-    const names = Array.from(e.target.files || []).map((f) => f.name);
-    if (names.length) setImages((prev) => [...prev, ...names]);
+  const onPickImages = async (e) => {
+    const files = Array.from(e.target.files || []);
     e.target.value = '';
+    const thumbs = await Promise.all(files.map(async (f) => ({ name: f.name, url: await fileToThumb(f) })));
+    if (thumbs.length) setImages((prev) => [...prev, ...thumbs]);
   };
   const submit = () => {
-    const items = [...lines, ...images.map((n) => `图片素材：${n}`)];
+    // 文本行交给 store 自动判别 text/link；图片显式记为 image 素材
+    const items = [
+      ...lines.map((t) => ({ text: t })),
+      ...images.map((im) => ({ kind: 'image', url: im.url, text: `图片：${im.name}` })),
+    ];
     const n = Store.addFragments(items);
     if (n > 0) { setJustAdded(n); setText(''); setImages([]); }
   };
@@ -57,12 +83,14 @@ export function UploadModal() {
           <input type="file" accept="image/*" multiple onChange={onPickImages} style={{ display: 'none' }} />
         </label>
         {images.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 10 }}>
-            {images.map((n, i) => (
-              <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 999,
-                background: G.bgWarm, border: `1px solid ${G.hair2}`, fontSize: 11.5, color: G.inkSoft, maxWidth: 180 }}>
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>🖼 {n}</span>
-                <span onClick={() => setImages(images.filter((_, j) => j !== i))} style={{ cursor: 'pointer', color: G.inkFaint }}>×</span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+            {images.map((im, i) => (
+              <span key={i} style={{ position: 'relative', width: 58, height: 58, borderRadius: 10, overflow: 'hidden',
+                border: `1px solid ${G.hair2}` }}>
+                <img src={im.url} alt={im.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <span onClick={() => setImages(images.filter((_, j) => j !== i))}
+                  style={{ position: 'absolute', top: 2, right: 2, width: 17, height: 17, borderRadius: '50%', cursor: 'pointer',
+                    background: 'rgba(46,42,32,0.62)', color: '#fff', fontSize: 12, lineHeight: '17px', textAlign: 'center' }}>×</span>
               </span>
             ))}
           </div>

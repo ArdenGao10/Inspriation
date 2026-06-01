@@ -7,6 +7,7 @@ import { G } from '../theme.js';
 import { GIcon, GAvatar, GlowField } from './glow.jsx';
 import { Store, useStore } from '../store.js';
 import { Auth } from '../lib/auth.js';
+import { FragmentRow } from './FragmentView.jsx';
 
 function fmtTime(ts) {
   if (!ts) return '';
@@ -18,7 +19,9 @@ function fmtTime(ts) {
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
-function SavedList({ items }) {
+function SavedList({ items, onDelete }) {
+  // 单条删除点两下确认：首次点 🗑 进入「删除?」态，再点才真删，避免误删。
+  const [confirmId, setConfirmId] = React.useState('');
   if (!items || items.length === 0) {
     return (
       <div style={{ padding: '14px 4px 18px', fontSize: 12.5, color: G.inkFaint, textAlign: 'center', lineHeight: 1.7 }}>
@@ -28,23 +31,38 @@ function SavedList({ items }) {
   }
   return (
     <div style={{ padding: '4px 0 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {items.map((it) => (
-        <div key={it.id} style={{ padding: '12px 14px', background: G.bgWarm, border: `1px solid ${G.hair2}`, borderRadius: 12 }}>
-          <div style={{ fontFamily: G.serif, fontSize: 15, color: G.ink, lineHeight: 1.45 }}>
-            {it.lead ? <>{it.lead} </> : null}
-            <span style={{ fontStyle: 'italic', color: G.gold }}>{it.accent || ''}</span>
-          </div>
-          {it.blurb && (
-            <div style={{ fontSize: 12.5, color: G.inkSoft, marginTop: 6, lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-              {it.blurb}
+      {items.map((it) => {
+        const confirming = confirmId === it.id;
+        return (
+          <div key={it.id} style={{ position: 'relative', padding: '12px 14px', background: G.bgWarm, border: `1px solid ${G.hair2}`, borderRadius: 12 }}>
+            <div style={{ fontFamily: G.serif, fontSize: 15, color: G.ink, lineHeight: 1.45, paddingRight: confirming ? 56 : 24 }}>
+              {it.lead ? <>{it.lead} </> : null}
+              <span style={{ fontStyle: 'italic', color: G.gold }}>{it.accent || ''}</span>
             </div>
-          )}
-          <div style={{ fontSize: 11, color: G.inkFaint, marginTop: 8, display: 'flex', justifyContent: 'space-between' }}>
-            <span>{fmtTime(it.ts)}</span>
-            {(it.sources && it.sources.length) ? <span>由 {it.sources.slice(0, 2).join(' · ')}{it.sources.length > 2 ? '…' : ''} 合成</span> : null}
+            {it.blurb && (
+              <div style={{ fontSize: 12.5, color: G.inkSoft, marginTop: 6, lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                {it.blurb}
+              </div>
+            )}
+            <div style={{ fontSize: 11, color: G.inkFaint, marginTop: 8, display: 'flex', justifyContent: 'space-between' }}>
+              <span>{fmtTime(it.ts)}</span>
+              {(it.sources && it.sources.length) ? <span>由 {it.sources.slice(0, 2).join(' · ')}{it.sources.length > 2 ? '…' : ''} 合成</span> : null}
+            </div>
+            {/* 删除：点 🗑 → 变红字「删除?」确认 → 再点才真删 */}
+            {confirming ? (
+              <span className="gpress" onClick={() => { onDelete(it.id); setConfirmId(''); }}
+                style={{ position: 'absolute', top: 10, right: 12, fontSize: 12, color: '#C0492B', fontWeight: 600, cursor: 'pointer' }}>
+                删除?
+              </span>
+            ) : (
+              <span className="gpress" onClick={() => setConfirmId(it.id)}
+                style={{ position: 'absolute', top: 9, right: 11, display: 'inline-flex', padding: 2, cursor: 'pointer' }}>
+                <GIcon name="trash" size={15} color={G.inkFaint} />
+              </span>
+            )}
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -58,11 +76,9 @@ function FragmentsList({ items }) {
     );
   }
   return (
-    <div style={{ padding: '4px 0 14px', display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 320, overflowY: 'auto' }} className="glow-scroll">
+    <div style={{ padding: '4px 0 14px', display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 340, overflowY: 'auto' }} className="glow-scroll">
       {items.slice().reverse().map((f) => (
-        <div key={f.id} style={{ padding: '9px 12px', background: G.bgWarm, border: `1px solid ${G.hair2}`, borderRadius: 10, fontSize: 13, color: G.ink, lineHeight: 1.5, wordBreak: 'break-word' }}>
-          {f.text}
-        </div>
+        <FragmentRow key={f.id} frag={f} onDelete={(id) => Store.removeFragment(id)} />
       ))}
     </div>
   );
@@ -205,7 +221,7 @@ export function AppMe() {
       n: String(savedCount),
       open: openSaved,
       onClick: () => setOpenSaved((v) => !v),
-      expand: openSaved && <SavedList items={saved} />,
+      expand: openSaved && <SavedList items={saved} onDelete={(id) => { Store.removeSaved(id); showToast('已删除这条灵感'); }} />,
     },
     {
       k: 'projects',
@@ -276,9 +292,15 @@ export function AppMe() {
             <div style={{ padding: '0 0 12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px 8px' }}>
                 <span style={{ fontSize: 11.5, color: G.inkSoft }}>全部素材</span>
-                <span className="gpress" onClick={(e) => { e.stopPropagation(); Store.set({ showUpload: true }); }}
-                  style={{ fontSize: 11.5, color: G.gold, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  <GIcon name="plus" size={12} color={G.gold} sw={2} />添加
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 14 }}>
+                  <span className="gpress" onClick={(e) => { e.stopPropagation(); Store.set({ showCalendar: true }); }}
+                    style={{ fontSize: 11.5, color: G.gold, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <GIcon name="calendar" size={12} color={G.gold} sw={1.7} />日历
+                  </span>
+                  <span className="gpress" onClick={(e) => { e.stopPropagation(); Store.set({ showUpload: true }); }}
+                    style={{ fontSize: 11.5, color: G.gold, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <GIcon name="plus" size={12} color={G.gold} sw={2} />添加
+                  </span>
                 </span>
               </div>
               <FragmentsList items={fragments} />

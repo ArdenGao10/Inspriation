@@ -89,8 +89,13 @@ function PageIdle({ onShake, shaking, fading }) {
     <>
       <div style={{ position: 'relative', zIndex: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 22px 0' }}>
         {serif('灵感罐', { fontSize: 17, letterSpacing: 0.5 })}
-        <span className="gpress" onClick={() => Store.set({ showUpload: true })} title="添加素材" style={{ display: 'inline-flex', cursor: 'pointer' }}>
-          <GIcon name="plus" size={21} color={G.gold} sw={1.9} />
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 16 }}>
+          <span className="gpress" onClick={() => Store.set({ showCalendar: true })} title="灵感日历" style={{ display: 'inline-flex', cursor: 'pointer' }}>
+            <GIcon name="calendar" size={19} color={G.gold} sw={1.7} />
+          </span>
+          <span className="gpress" onClick={() => Store.set({ showUpload: true })} title="添加素材" style={{ display: 'inline-flex', cursor: 'pointer' }}>
+            <GIcon name="plus" size={21} color={G.gold} sw={1.9} />
+          </span>
         </span>
       </div>
       <div style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>

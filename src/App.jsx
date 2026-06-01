@@ -9,6 +9,7 @@ import { AppCommunity } from './components/AppCommunity.jsx';
 import { AppMe } from './components/AppMe.jsx';
 import { KeyModal } from './components/KeyModal.jsx';
 import { UploadModal } from './components/UploadModal.jsx';
+import { CalendarModal } from './components/CalendarModal.jsx';
 import { AuthScreen } from './components/AuthScreen.jsx';
 import { Store, useStore } from './store.js';
 import { G } from './theme.js';
@@ -47,6 +48,7 @@ export default function App() {
       </AppShell>
       <KeyModal />
       <UploadModal />
+      <CalendarModal />
     </>
   );
 }

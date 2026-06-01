@@ -50,11 +50,46 @@ if (load('convVer', 0) !== CONV_VERSION) {
   save('convVer', CONV_VERSION);
 }
 
+// —— 素材类型 ——
+// 素材从纯文本升级成「带类型 + 时间戳」：kind ∈ text | link | image。
+//   - text  ：{ text }
+//   - link  ：{ text, url }（url 为链接地址，text 默认同 url）
+//   - image ：{ text, url }（url 为图片 dataURL，text 为「图片：文件名」等说明）
+// ts（毫秒）用于「灵感日历」按天聚合统计。agent 仍只读 f.text，保持兼容。
+const URL_RE = /^https?:\/\/\S+$/i;
+export const detectKind = (t) => (URL_RE.test((t || '').trim()) ? 'link' : 'text');
+// 规整一条素材：补 ts / kind / url，兼容旧的 {id,text} 与纯字符串
+function normFrag(f, i, baseTs) {
+  if (typeof f === 'string') f = { text: f };
+  f = f || {};
+  const text = f.text || '';
+  let ts = f.ts;
+  if (!ts) {
+    // 旧的 f<毫秒> id 能反解出时间；否则按序在过去铺开（给日历一点初始热度，约 0.37 天/条）
+    const m = /^f(\d{10,})/.exec(f.id || '');
+    ts = m ? Number(m[1]) : Math.round(baseTs - i * 0.37 * 86400e3);
+  }
+  const kind = f.kind || detectKind(text);
+  const out = { id: f.id || ('f' + baseTs + '-' + i), text, ts, kind };
+  if (f.url) out.url = f.url;
+  return out;
+}
+
+// 迁移：把灵感罐素材统一成带 ts/kind 的结构，并持久化一次（之后时间戳稳定，不随刷新漂移）。
+const FRAG_VERSION = 2;
+if (load('fragVer', 0) < FRAG_VERSION) {
+  const raw = load('fragments', SEED_FRAGMENTS);
+  const base = Date.now();
+  save('fragments', (raw || []).map((f, i) => normFrag(f, i, base)));
+  save('fragVer', FRAG_VERSION);
+}
+
 let state = {
   user: load('user', null),       // 登录用户 { email, name }；未登录为 null。鉴权逻辑在 lib/auth.js
   authReady: !hasSupabase,        // 鉴权是否就绪：mock 模式立即就绪；Supabase 模式等 getSession 回来
   apiKey: load('apiKey', ''),     // 用户在弹窗里填的 Key（agent 会优先用 .env 的 VITE_ZHIPU_KEY）
-  fragments: load('fragments', SEED_FRAGMENTS).map((t, i) => typeof t === 'string' ? { id: 'seed' + i, text: t } : t),
+  fragments: load('fragments', SEED_FRAGMENTS).map((f, i) => normFrag(f, i, Date.now())), // {id,text,ts,kind,url?}
+
   saved: load('saved', []),
   conversations: load('conversations', []), // 多会话 [{id,title,messages,updatedAt}]，持久化
   activeConvId: load('activeConvId', ''),    // 当前激活会话 id
@@ -62,6 +97,7 @@ let state = {
   prefs: load('prefs', []),       // 灵感口味偏好标签，持久化
   needKey: false,                 // 控制 API Key 弹窗
   showUpload: false,              // 控制素材上传弹窗
+  showCalendar: false,            // 控制灵感日历全屏页
   pendingIdea: null,              // 从首页「让 Agent 展开它」带过去的灵感；对话页消费后清空
 };
 
@@ -85,7 +121,16 @@ export const Store = {
   set,
   addSaved(idea) { const it = { id: 'i' + Date.now(), ...idea, ts: Date.now() }; set({ saved: [it, ...state.saved] }); return it; },
   removeSaved(id) { set({ saved: state.saved.filter((s) => s.id !== id) }); },
-  addFragment(text) { const t = (text || '').trim(); if (!t) return null; const it = { id: 'f' + Date.now(), text: t }; set({ fragments: [...state.fragments, it] }); return it.id; },
+  // 入参可为字符串（文本素材）或对象 { text, kind?, url? }（链接 / 图片素材）
+  addFragment(input) {
+    const f = typeof input === 'string' ? { text: input } : (input || {});
+    const text = (f.text || '').trim();
+    if (!text && !f.url) return null;
+    const it = { id: 'f' + Date.now(), text, ts: Date.now(), kind: f.kind || detectKind(text) };
+    if (f.url) it.url = f.url;
+    set({ fragments: [...state.fragments, it] });
+    return it.id;
+  },
   removeFragment(id) { set({ fragments: state.fragments.filter((f) => f.id !== id) }); },
   setPendingIdea(idea) { set({ pendingIdea: idea || null }); },
   clearPendingIdea() { if (state.pendingIdea) set({ pendingIdea: null }); },
@@ -150,9 +195,18 @@ export const Store = {
     set({ prefs: has ? state.prefs.filter((t) => t !== tag) : [...state.prefs, tag] });
   },
   // 批量加入素材，返回实际新增条数（用于"输入多少加多少计数"）
+  // list 每项可为字符串或 { text, kind?, url? }
   addFragments(list) {
-    const items = (list || []).map((t) => String(t).trim()).filter(Boolean)
-      .map((t, i) => ({ id: 'f' + Date.now() + '-' + i, text: t }));
+    const now = Date.now();
+    const items = (list || []).map((f, i) => {
+      if (typeof f === 'string') f = { text: f };
+      f = f || {};
+      const text = (f.text || '').trim();
+      if (!text && !f.url) return null;
+      const it = { id: 'f' + now + '-' + i, text, ts: now + i, kind: f.kind || detectKind(text) };
+      if (f.url) it.url = f.url;
+      return it;
+    }).filter(Boolean);
     if (!items.length) return 0;
     set({ fragments: [...state.fragments, ...items] });
     return items.length;
