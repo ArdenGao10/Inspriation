@@ -496,3 +496,11 @@
 
 - `AppAgent.jsx`：`showCardCTA` 的门槛 `userTurns >= 3` → `>= 2`；并加 `lastAgentIdx >= 0` 兜底（确保有 Agent 气泡可挂）。入口位置不变，仍挂在最后一条 Agent 气泡末尾。
 - `npm run build` 通过（84 模块）。
+
+## 步骤 31 · 复活登录/注册（`git revert f10b6b2`）
+
+> 用户要求重新加上注册/登录。步骤 29 的代码本身没问题（被 revert 只因当时 anon key 失效），直接 `git revert --no-commit f10b6b2` 整套复活：`lib/auth.js` + `components/AuthScreen.jsx` + `App.jsx` 入口门禁 + `AppMe.jsx` 真实 user/退出登录 + `store.js` 的 `user`/`authReady` 字段全部回来，仅 `DEVLOG.md` 有冲突（已手动并好）。
+
+- 鉴权仍沿用「Supabase 可选 / 本地 mock 回退」：`.env` 配了 `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` → 走 Supabase Auth；没配 → 本地 localStorage mock，开发期照样能跑。
+- ⚠️ 上线前务必在 Supabase 控制台核对 anon key 与项目 URL 一致（步骤 29 翻车点）。Supabase 默认开启「邮箱确认」，注册后需点确认邮件才有 session；演示想免确认直登，到 Auth → Providers/Email 关掉 "Confirm email"。
+- 部署到 Vercel 时把 `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` 配进项目 Environment Variables（前端用，带 `VITE_` 前缀没问题，anon key 本就是公开可用的）。

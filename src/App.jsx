@@ -9,7 +9,9 @@ import { AppCommunity } from './components/AppCommunity.jsx';
 import { AppMe } from './components/AppMe.jsx';
 import { KeyModal } from './components/KeyModal.jsx';
 import { UploadModal } from './components/UploadModal.jsx';
-import { Store } from './store.js';
+import { AuthScreen } from './components/AuthScreen.jsx';
+import { Store, useStore } from './store.js';
+import { G } from './theme.js';
 
 // 单个 Tab 容器：铺满内容区，非激活时 display:none（DOM 保留、state 不卸载）。
 function TabPane({ active, children }) {
@@ -22,11 +24,19 @@ function TabPane({ active, children }) {
 
 export default function App() {
   const [tab, setTab] = React.useState('home');
+  const user = useStore((s) => s.user);
+  const authReady = useStore((s) => s.authReady);
   // 社区「接力」→ 把帖子的想法带到对话页让 Agent 展开
   const relayToAgent = (post) => {
     Store.setPendingIdea({ lead: '', accent: post.title, blurb: '' });
     setTab('agent');
   };
+  // 鉴权还没就绪（Supabase 模式下等 getSession）：先留白，避免登录页闪一下
+  if (!authReady) {
+    return <div style={{ position: 'fixed', inset: 0, background: G.bg }} />;
+  }
+  // 入口门禁：未登录只给登录 / 注册页
+  if (!user) return <AuthScreen />;
   return (
     <>
       <AppShell active={tab} onChange={setTab}>
